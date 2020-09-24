@@ -24,3 +24,18 @@ jobs:
     - uses: actions/checkout@main
     - uses: glg-public/build-and-deploy-ecr@main
 ```
+
+You can optionally disable deploying, and have this action only build your image:
+
+```yml
+name: Build Image and Push to ECR
+on: [push]
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@main
+    - uses: glg-public/build-and-deploy-ecr@main
+      with:
+        deploy: false
+```

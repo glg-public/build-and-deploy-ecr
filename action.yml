@@ -1,5 +1,10 @@
 name: "Build and Deploy to ECR"
 description: "Builds an image from a dockerfile, and pushes it up to ECR"
+inputs:
+  deploy:
+    description: "Whether to push the image to ECR after building it"
+    required: false
+    default: 'true'
 runs:
   using: "composite"
   steps:
@@ -13,7 +18,7 @@ runs:
       AWS_SECRET_ACCESS_KEY="${{secrets.ECR_AWS_SECRET_ACCESS_KEY}}" \
         aws ecr get-login-password --region "${AWS_REGION}" | docker login --username AWS --password-stdin ${{secrets.ECR_URI}}
       docker build -t $CONTAINER_IMAGE_SHA -t $CONTAINER_IMAGE_LATEST .
-      [ "$BRANCH" = "master" ] \
+      [ "$INPUT_DEPLOY" = "true" ] \
         && docker push $CONTAINER_IMAGE_SHA \
         && docker push $CONTAINER_IMAGE_LATEST
      shell: bash
