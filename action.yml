@@ -5,12 +5,16 @@ inputs:
     description: "Whether to push the image to ECR after building it"
     required: false
     default: 'true'
+  ecr_uri:
+    description: "The URI for the ECR repository"
+    required: false
+    default: ${{secrets.ECR_URI}}
 runs:
   using: "composite"
   steps:
     - run: |
         BRANCH=$(echo ${{github.ref}} | cut -f3 -d'/')
-        CONTAINER_IMAGE="${{secrets.ECR_URI}}/github/${{github.repository}}/${BRANCH}"
+        CONTAINER_IMAGE="${INPUT_ECR_URI}/github/${{github.repository}}/${BRANCH}"
         CONTAINER_IMAGE_SHA="${CONTAINER_IMAGE}:${{github.sha}}"
         CONTAINER_IMAGE_LATEST="${CONTAINER_IMAGE}:latest"
         AWS_REGION=$(echo ${{secrets.ECR_URI}} | cut -f4 -d'.')
