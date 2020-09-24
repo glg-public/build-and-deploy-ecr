@@ -22,7 +22,7 @@ runs:
         CONTAINER_IMAGE="${INPUT_ECR_URI}/github/${{github.repository}}/${BRANCH}"
         CONTAINER_IMAGE_SHA="${CONTAINER_IMAGE}:${{github.sha}}"
         CONTAINER_IMAGE_LATEST="${CONTAINER_IMAGE}:latest"
-        AWS_REGION=$(echo "${INPUT_ECR_URI}"" | cut -f4 -d'.')
+        AWS_REGION=$(echo "${INPUT_ECR_URI}" | cut -f4 -d'.')
         echo $AWS_REGION
         AWS_ACCESS_KEY_ID="${INPUT_ACCESS_KEY_ID}" \
         AWS_SECRET_ACCESS_KEY="${INPUT_SECRET_ACCESS_KEY}" \
