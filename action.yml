@@ -20,6 +20,7 @@ runs:
     - run: |
         echo $INPUT_DEPLOY
         env
+        echo "THIS IS JUST PLAIN TEXT"
         BRANCH=$(echo ${{github.ref}} | cut -f3 -d'/')
         CONTAINER_IMAGE="${INPUT_ECR_URI}/github/${{github.repository}}/${BRANCH}"
         CONTAINER_IMAGE_SHA="${CONTAINER_IMAGE}:${{github.sha}}"
