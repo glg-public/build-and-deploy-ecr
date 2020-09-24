@@ -18,6 +18,7 @@ runs:
   using: "composite"
   steps:
     - run: |
+        echo $INPUT_DEPLOY
         env
         BRANCH=$(echo ${{github.ref}} | cut -f3 -d'/')
         CONTAINER_IMAGE="${INPUT_ECR_URI}/github/${{github.repository}}/${BRANCH}"
