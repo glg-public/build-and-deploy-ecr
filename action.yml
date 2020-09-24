@@ -18,9 +18,8 @@ runs:
   using: "composite"
   steps:
     - run: |
-        echo "::set-env name=INPUT_DEPLOY::${{inputs.deploy}}"
-        echo $INPUT_DEPLOY
-        echo "THIS IS JUST PLAIN TEXT 2"
+        echo ${{inputs.deploy}}
+        echo "THIS IS JUST PLAIN TEXT 3"
         BRANCH=$(echo ${{github.ref}} | cut -f3 -d'/')
         CONTAINER_IMAGE="${INPUT_ECR_URI}/github/${{github.repository}}/${BRANCH}"
         CONTAINER_IMAGE_SHA="${CONTAINER_IMAGE}:${{github.sha}}"
