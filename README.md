@@ -23,6 +23,10 @@ jobs:
     steps:
     - uses: actions/checkout@main
     - uses: glg-public/build-and-deploy-ecr@main
+      with:
+        ecr_uri: ${{secrets.ECR_URI}}
+        access_key_id: ${{secrets.ECR_AWS_ACCESS_KEY_ID}}
+        secret_access_key: ${{secrets.ECR_AWS_SECRET_ACCESS_KEY}}
 ```
 
 You can optionally disable deploying, and have this action only build your image:
@@ -37,5 +41,8 @@ jobs:
     - uses: actions/checkout@main
     - uses: glg-public/build-and-deploy-ecr@main
       with:
+        ecr_uri: ${{secrets.ECR_URI}}
+        access_key_id: ${{secrets.ECR_AWS_ACCESS_KEY_ID}}
+        secret_access_key: ${{secrets.ECR_AWS_SECRET_ACCESS_KEY}}
         deploy: false
 ```
