@@ -10,6 +10,7 @@ This action requires certain things to be configured in your repo:
     1. `ECR_URI`
     2. `ECR_AWS_ACCESS_KEY_ID`
     3. `ECR_AWS_SECRET_ACCESS_KEY`
+3. This action was developed against the `ubuntu-20.04` github actions environment, and it may not work correctly in a different environment.
 
 ## Example Usage
 
