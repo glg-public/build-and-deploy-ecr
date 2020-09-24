@@ -7,8 +7,13 @@ inputs:
     default: 'true'
   ecr_uri:
     description: "The URI for the ECR repository"
-    required: false
-    default: ${{secrets.ECR_URI}}
+    required: true
+  access_key_id:
+    description: "An AWS Access Key ID"
+    required: true
+  secret_access_key:
+    description: "An AWS Secret Access Key"
+    required: true
 runs:
   using: "composite"
   steps:
@@ -17,10 +22,10 @@ runs:
         CONTAINER_IMAGE="${INPUT_ECR_URI}/github/${{github.repository}}/${BRANCH}"
         CONTAINER_IMAGE_SHA="${CONTAINER_IMAGE}:${{github.sha}}"
         CONTAINER_IMAGE_LATEST="${CONTAINER_IMAGE}:latest"
-        AWS_REGION=$(echo ${{secrets.ECR_URI}} | cut -f4 -d'.')
-        AWS_ACCESS_KEY_ID="${{secrets.ECR_AWS_ACCESS_KEY_ID}}" \
-        AWS_SECRET_ACCESS_KEY="${{secrets.ECR_AWS_SECRET_ACCESS_KEY}}" \
-          aws ecr get-login-password --region "${AWS_REGION}" | docker login --username AWS --password-stdin ${{secrets.ECR_URI}}
+        AWS_REGION=$(echo ${INPUT_ECR_URI} | cut -f4 -d'.')
+        AWS_ACCESS_KEY_ID="${INPUT_ACCESS_KEY_ID}" \
+        AWS_SECRET_ACCESS_KEY="${INPUT_SECRET_ACCESS_KEY}" \
+          aws ecr get-login-password --region "${AWS_REGION}" | docker login --username AWS --password-stdin ${INPUT_ECR_URI}
         docker build -t $CONTAINER_IMAGE_SHA -t $CONTAINER_IMAGE_LATEST .
         [ "$INPUT_DEPLOY" = "true" ] \
           && docker push $CONTAINER_IMAGE_SHA \
