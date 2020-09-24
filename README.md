@@ -32,7 +32,7 @@ jobs:
 You can optionally disable deploying, and have this action only build your image:
 
 ```yml
-name: Build Image and Push to ECR
+name: Build Image and Do Not Push to ECR
 on: [push]
 jobs:
   build-and-deploy:
