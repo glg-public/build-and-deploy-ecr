@@ -18,19 +18,17 @@ runs:
   using: "composite"
   steps:
     - run: |
-        echo ${{inputs.deploy}}
-        echo "THIS IS JUST PLAIN TEXT 3"
         BRANCH=$(echo ${{github.ref}} | cut -f3 -d'/')
-        CONTAINER_IMAGE="${INPUT_ECR_URI}/github/${{github.repository}}/${BRANCH}"
+        CONTAINER_IMAGE="${{inputs.ecr_uri}}/github/${{github.repository}}/${BRANCH}"
         CONTAINER_IMAGE_SHA="${CONTAINER_IMAGE}:${{github.sha}}"
         CONTAINER_IMAGE_LATEST="${CONTAINER_IMAGE}:latest"
-        AWS_REGION=$(echo "${INPUT_ECR_URI}" | cut -f4 -d'.')
+        AWS_REGION=$(echo "${{inputs.ecr_uri}}" | cut -f4 -d'.')
         echo $AWS_REGION
-        AWS_ACCESS_KEY_ID="${INPUT_ACCESS_KEY_ID}" \
-        AWS_SECRET_ACCESS_KEY="${INPUT_SECRET_ACCESS_KEY}" \
-          aws ecr get-login-password --region "${AWS_REGION}" | docker login --username AWS --password-stdin ${INPUT_ECR_URI}
+        AWS_ACCESS_KEY_ID="${{inputs.access_key_id}}" \
+        AWS_SECRET_ACCESS_KEY="${{inputs.secret_access_key}}" \
+          aws ecr get-login-password --region "${AWS_REGION}" | docker login --username AWS --password-stdin ${{inputs.ecr_uri}}
         docker build -t $CONTAINER_IMAGE_SHA -t $CONTAINER_IMAGE_LATEST .
-        [ "$INPUT_DEPLOY" = "true" ] \
+        [ "${{inputs.deploy}}" = "true" ] \
           && docker push $CONTAINER_IMAGE_SHA \
           && docker push $CONTAINER_IMAGE_LATEST
       shell: bash
