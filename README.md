@@ -21,5 +21,6 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-20.04
     steps:
+    - uses: actions/checkout@main
     - uses: glg-public/build-and-deploy-ecr@main
 ```
