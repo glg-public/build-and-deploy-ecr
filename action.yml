@@ -1,33 +1,40 @@
-name: "Build and Deploy to ECR"
-description: "Builds an image from a dockerfile, and pushes it up to ECR"
+name: Build and Deploy to ECR
+description: Builds an image from a dockerfile, and pushes it up to ECR
 inputs:
   deploy:
-    description: "Whether to push the image to ECR after building it"
+    description: Whether to push the image to ECR after building it
     required: false
     default: 'true'
   ecr_uri:
-    description: "The URI for the ECR repository"
+    description: The URI for the ECR repository
     required: true
   access_key_id:
-    description: "An AWS Access Key ID"
+    description: An AWS Access Key ID
     required: true
   secret_access_key:
-    description: "An AWS Secret Access Key"
+    description: An AWS Secret Access Key
     required: true
 runs:
-  using: "composite"
+  using: composite
   steps:
-    - run: |
-        BRANCH=$(echo ${{github.ref}} | cut -f3 -d'/')
-        CONTAINER_IMAGE="${{inputs.ecr_uri}}/github/${{github.repository}}/${BRANCH}"
-        CONTAINER_IMAGE_SHA="${CONTAINER_IMAGE}:${{github.sha}}"
-        CONTAINER_IMAGE_LATEST="${CONTAINER_IMAGE}:latest"
-        AWS_REGION=$(echo "${{inputs.ecr_uri}}" | cut -f4 -d'.')
-        AWS_ACCESS_KEY_ID="${{inputs.access_key_id}}" \
-        AWS_SECRET_ACCESS_KEY="${{inputs.secret_access_key}}" \
-          aws ecr get-login-password --region "${AWS_REGION}" | docker login --username AWS --password-stdin ${{inputs.ecr_uri}}
-        docker build -t $CONTAINER_IMAGE_SHA -t $CONTAINER_IMAGE_LATEST .
-        [ "${{inputs.deploy}}" = "true" ] \
-          && docker push $CONTAINER_IMAGE_SHA \
-          && docker push $CONTAINER_IMAGE_LATEST
+    - name: Setup Environment
+      id: setup
+      run: |
+        echo ::set-env name=CONTAINER_NAME::${{ inputs.ecr_uri }}/github/$GITHUB_REPOSITORY/$(cut --delimiter '/' --fields 3- <<< "$GITHUB_REF")
+        echo ::set-output name=region::$(cut --delimiter '.' --fields 4 <<< ${{ inputs.ecr_uri }})
       shell: bash
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.access_key_id }}
+        aws-secret-access-key: ${{ secrets.secret_access_key }}
+        aws-region: ${{ steps.setup.outputs.region }}
+    - name: Login to Amazon ECR
+      uses: aws-actions/amazon-ecr-login@v2
+    - name: Build and tag image
+      run: docker build --tag $CONTAINER_NAME:$GITHUB_SHA --tag $CONTAINER_NAME:latest .
+    - name: Push tags to ECR
+      if: ${{ inputs.deploy == 'true' }}
+      run: |
+        docker push $CONTAINER_NAME:$GITHUB_SHA
+        docker push $CONTAINER_NAME:latest
