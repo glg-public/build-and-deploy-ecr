@@ -20,6 +20,7 @@ runs:
     - run: |
         BRANCH=$(echo ${{github.ref}} | cut -f3 -d'/')
         CONTAINER_IMAGE="${{inputs.ecr_uri}}/github/${{github.repository}}/${BRANCH}"
+        CONTAINER_IMAGE=$(echo "$CONTAINER_IMAGE" | tr '[:upper:]' '[:lower:]')
         CONTAINER_IMAGE_SHA="${CONTAINER_IMAGE}:${{github.sha}}"
         CONTAINER_IMAGE_LATEST="${CONTAINER_IMAGE}:latest"
         AWS_REGION=$(echo "${{inputs.ecr_uri}}" | cut -f4 -d'.')
