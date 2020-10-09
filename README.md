@@ -49,7 +49,7 @@ jobs:
 
 ## Example with Private Dependencies
 
-```
+```yml
 name: Build Image and Push to ECR
 on: [push]
 jobs:
