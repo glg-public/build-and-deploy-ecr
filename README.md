@@ -46,3 +46,21 @@ jobs:
         secret_access_key: ${{secrets.ECR_AWS_SECRET_ACCESS_KEY}}
         deploy: false
 ```
+
+## Example with Private Dependencies
+
+```
+name: Build Image and Push to ECR
+on: [push]
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@main
+    - uses: glg-public/build-and-deploy-ecr@main
+      with:
+        ecr_uri: ${{secrets.ECR_URI}}
+        access_key_id: ${{secrets.ECR_AWS_ACCESS_KEY_ID}}
+        secret_access_key: ${{secrets.ECR_AWS_SECRET_ACCESS_KEY}}
+        github_ssh_key: ${{secrets.GITHUB_SSH_KEY}}
+```

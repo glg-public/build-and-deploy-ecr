@@ -4,7 +4,7 @@ inputs:
   deploy:
     description: "Whether to push the image to ECR after building it"
     required: false
-    default: 'true'
+    default: "true"
   ecr_uri:
     description: "The URI for the ECR repository"
     required: true
@@ -14,6 +14,10 @@ inputs:
   secret_access_key:
     description: "An AWS Secret Access Key"
     required: true
+  github_ssh_key:
+    description: "A SSH Private Key with access to any private repos you need"
+    required: false
+    default: ""
 runs:
   using: "composite"
   steps:
@@ -27,7 +31,9 @@ runs:
         AWS_ACCESS_KEY_ID="${{inputs.access_key_id}}" \
         AWS_SECRET_ACCESS_KEY="${{inputs.secret_access_key}}" \
           aws ecr get-login-password --region "${AWS_REGION}" | docker login --username AWS --password-stdin ${{inputs.ecr_uri}}
-        docker build -t $CONTAINER_IMAGE_SHA -t $CONTAINER_IMAGE_LATEST .
+        [ -z "${{inputs.github_ssh_key}}" ] \
+          && docker build -t $CONTAINER_IMAGE_SHA -t $CONTAINER_IMAGE_LATEST . \
+          || docker build -t $CONTAINER_IMAGE_SHA -t $CONTAINER_IMAGE_LATEST --build-arg "GITHUB_SSH_KEY=${{inputs.github_ssh_key}}".
         [ "${{inputs.deploy}}" = "true" ] \
           && docker push $CONTAINER_IMAGE_SHA \
           && docker push $CONTAINER_IMAGE_LATEST
