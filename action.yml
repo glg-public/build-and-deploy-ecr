@@ -32,8 +32,8 @@ runs:
         AWS_SECRET_ACCESS_KEY="${{inputs.secret_access_key}}" \
           aws ecr get-login-password --region "${AWS_REGION}" | docker login --username AWS --password-stdin ${{inputs.ecr_uri}}
         [ -z "${{inputs.github_ssh_key}}" ] \
-          && docker build -t $CONTAINER_IMAGE_SHA -t $CONTAINER_IMAGE_LATEST . \
-          || docker build -t $CONTAINER_IMAGE_SHA -t $CONTAINER_IMAGE_LATEST --build-arg "GITHUB_SSH_KEY=${{inputs.github_ssh_key}}".
+          && docker build -t $CONTAINER_IMAGE_SHA -t $CONTAINER_IMAGE_LATEST --build-arg "GITHUB_SHA=${{github.sha}}" . \
+          || docker build -t $CONTAINER_IMAGE_SHA -t $CONTAINER_IMAGE_LATEST --build-arg "GITHUB_SHA=${{github.sha}}" --build-arg "GITHUB_SSH_KEY=${{inputs.github_ssh_key}}".
         [ "${{inputs.deploy}}" = "true" ] \
           && docker push $CONTAINER_IMAGE_SHA \
           && docker push $CONTAINER_IMAGE_LATEST
