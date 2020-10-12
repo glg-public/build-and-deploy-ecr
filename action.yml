@@ -31,9 +31,18 @@ runs:
         AWS_ACCESS_KEY_ID="${{inputs.access_key_id}}" \
         AWS_SECRET_ACCESS_KEY="${{inputs.secret_access_key}}" \
           aws ecr get-login-password --region "${AWS_REGION}" | docker login --username AWS --password-stdin ${{inputs.ecr_uri}}
-        [ -z "${{inputs.github_ssh_key}}" ] \
-          && docker build -t $CONTAINER_IMAGE_SHA -t $CONTAINER_IMAGE_LATEST --build-arg "GITHUB_SHA=${{github.sha}}" . \
-          || docker build -t $CONTAINER_IMAGE_SHA -t $CONTAINER_IMAGE_LATEST --build-arg "GITHUB_SHA=${{github.sha}}" --build-arg "GITHUB_SSH_KEY=${{inputs.github_ssh_key}}".
+        # Only include the GITHUB_SSH_KEY if it exists
+        [ -n "${{inputs.github_ssh_key}}" ] && ARG_GITHUB_SSH_KEY='--build-arg "GITHUB_SSH_KEY=${{inputs.github_ssh_key}}"'
+        # Only include the GITHUB_SHA if it is used (supresses a warning)
+        grep -q "GITHUB_SHA" ./Dockerfile > /dev/null && ARG_GITHUB_SHA='--build-arg "GITHUB_SHA=${{github.sha}}"'
+
+        eval docker build \
+          -t $CONTAINER_IMAGE_SHA \
+          -t $CONTAINER_IMAGE_LATEST \
+          $ARG_GITHUB_SSH_KEY \
+          $ARG_GITHUB_SHA \
+          . 
+
         [ "${{inputs.deploy}}" = "true" ] \
           && docker push $CONTAINER_IMAGE_SHA \
           && docker push $CONTAINER_IMAGE_LATEST
