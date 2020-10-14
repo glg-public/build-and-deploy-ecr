@@ -22,7 +22,7 @@ runs:
   using: "composite"
   steps:
     - run: |
-        BRANCH=$(echo ${{github.ref}} | cut -f3 -d'/')
+        BRANCH=$(echo ${{github.ref}} | cut --delimiter '/' --fields 3-)
         CONTAINER_IMAGE="${{inputs.ecr_uri}}/github/${{github.repository}}/${BRANCH}"
         CONTAINER_IMAGE=$(echo "$CONTAINER_IMAGE" | tr '[:upper:]' '[:lower:]')
         CONTAINER_IMAGE_SHA="${CONTAINER_IMAGE}:${{github.sha}}"
@@ -41,7 +41,7 @@ runs:
           -t $CONTAINER_IMAGE_LATEST \
           $ARG_GITHUB_SSH_KEY \
           $ARG_GITHUB_SHA \
-          . 
+          .
 
         [ "${{inputs.deploy}}" = "true" ] \
           && docker push $CONTAINER_IMAGE_SHA \
