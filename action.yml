@@ -32,7 +32,7 @@ runs:
         AWS_SECRET_ACCESS_KEY="${{inputs.secret_access_key}}" \
           aws ecr get-login-password --region "${AWS_REGION}" | docker login --username AWS --password-stdin ${{inputs.ecr_uri}}
         # Only include the GITHUB_SSH_KEY if it exists
-        [ -n "${{inputs.github_ssh_key}}" ] && ARG_GITHUB_SSH_KEY='--build-arg "DEPLOYMENT_SSH_KEY=$(echo ${{inputs.github_ssh_key}} | base64)"'
+        [ -n "${{inputs.github_ssh_key}}" ] && ENCODED_KEY=$(echo ${{inputs.github_ssh_key}} | base64) && ARG_GITHUB_SSH_KEY='--build-arg "DEPLOYMENT_SSH_KEY=$ENCODED_KEY"'
         # Only include the GITHUB_SHA if it is used (supresses a warning)
         grep -q "GITHUB_SHA" ./Dockerfile > /dev/null && ARG_GITHUB_SHA='--build-arg "GITHUB_SHA=${{github.sha}}"'
 
