@@ -22,6 +22,7 @@ runs:
   using: "composite"
   steps:
     - run: |
+        echo test | base64
         BRANCH=$(echo ${{github.ref}} | cut -f3 -d'/')
         CONTAINER_IMAGE="${{inputs.ecr_uri}}/github/${{github.repository}}/${BRANCH}"
         CONTAINER_IMAGE=$(echo "$CONTAINER_IMAGE" | tr '[:upper:]' '[:lower:]')
