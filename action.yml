@@ -64,7 +64,7 @@ runs:
 
         echo "Testing healthcheck ${HEALTHCHECK} : Attempt ${ATTEMPT_COUNT} of ${MAX_ATTEMPTS}"
         until $(curl --output /dev/null --silent --head --fail --max-time 5 "${HEALTHCHECK}"); do
-          if [ "$((ATTEMPT_COUNT++))" -gt "${MAX_ATTEMPTS}" ];then
+          if [ "$((++ATTEMPT_COUNT))" -gt "${MAX_ATTEMPTS}" ];then
             echo "Container did not pass healthcheck"
             echo $(docker stop test-container) stopped.
             exit 1
