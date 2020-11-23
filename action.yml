@@ -18,6 +18,14 @@ inputs:
     description: "A SSH Private Key with access to any private repos you need"
     required: false
     default: ""
+  healthcheck:
+    description: "A healthcheck path, like /healthcheck",
+    required: false
+    default: "/healthcheck"
+  port:
+    description: "The port the server listens on"
+    required: false
+    default: 3000
 runs:
   using: "composite"
   steps:
@@ -42,6 +50,33 @@ runs:
           $ARG_GITHUB_SSH_KEY \
           $ARG_GITHUB_SHA \
           . 
+
+        # Healthcheck the built container
+        docker run -d \
+        -p ${{inputs.port}}:${{inputs.port}} -e "PORT=${{inputs.port}}" \
+        -e "HEALTHCHECK=${{inputs.healthcheck}} \
+        --name test-container $CONTAINER_IMAGE_SHA
+
+        ATTEMPT_COUNT=1
+        MAX_ATTEMPTS=5
+
+        HEALTHCHECK="http://localhost:${{inputs.port}}${{inputs.healthcheck}}"
+
+        echo "Testing healthcheck ${HEALTHCHECK} : Attempt ${ATTEMPT_COUNT} of ${MAX_ATTEMPTS}"
+        until $(curl --output /dev/null --silent --head --fail --max-time 5 "${HEALTHCHECK}"); do
+          if [ ${ATTEMPT_COUNT} -eq ${MAX_ATTEMPTS} ];then
+            echo "Container did not pass healthcheck"
+            echo $(docker stop test-container) stopped.
+            exit 1
+          fi
+
+          ATTEMPT_COUNT=$(($ATTEMPT_COUNT+1))
+          sleep 5
+          echo "Testing healthcheck ${HEALTHCHECK} : Attempt ${ATTEMPT_COUNT} of ${MAX_ATTEMPTS}"
+        done
+
+        echo "Healthcheck passed!"
+        docker stop test-container
 
         [ "${{inputs.deploy}}" = "true" ] \
           && docker push $CONTAINER_IMAGE_SHA \
