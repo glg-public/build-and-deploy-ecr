@@ -76,7 +76,7 @@ runs:
         done
 
         echo "Healthcheck passed!"
-        docker stop test-container
+        echo $(docker stop test-container) stopped.
 
         [ "${{inputs.deploy}}" = "true" ] \
           && docker push $CONTAINER_IMAGE_SHA \
