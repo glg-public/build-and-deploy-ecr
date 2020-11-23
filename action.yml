@@ -62,7 +62,7 @@ runs:
 
         HEALTHCHECK="http://localhost:${{inputs.port}}${{inputs.healthcheck}}"
 
-        echo "Testing healthcheck ${HEALTHCHECK} : Attempt ${ATTEMPT_COUNT} of ${MAX_ATTEMPTS}"
+        echo "Testing healthcheck ${HEALTHCHECK} : Attempt 1 of ${MAX_ATTEMPTS}"
         until $(curl --output /dev/null --silent --head --fail --max-time 5 "${HEALTHCHECK}"); do
           if [ "$((++ATTEMPT_COUNT))" -gt "${MAX_ATTEMPTS}" ];then
             echo "Container did not pass healthcheck"
