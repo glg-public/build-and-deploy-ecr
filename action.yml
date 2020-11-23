@@ -19,13 +19,13 @@ inputs:
     required: false
     default: ""
   healthcheck:
-    description: "A healthcheck path, like /healthcheck",
+    description: "A healthcheck path, like /healthcheck"
     required: false
     default: "/healthcheck"
   port:
     description: "The port the server listens on"
     required: false
-    default: "3000"
+    default: 3000
 runs:
   using: "composite"
   steps:
