@@ -15,7 +15,7 @@ inputs:
     description: "An AWS Secret Access Key"
     required: true
   github_ssh_key:
-    description: "A SSH Private Key with access to any private repos you need"
+    description: "An SSH Private Key with access to any private repos you need"
     required: false
     default: ""
   healthcheck:
