@@ -57,20 +57,19 @@ runs:
         -e "HEALTHCHECK=${{inputs.healthcheck}}" \
         --name test-container $CONTAINER_IMAGE_SHA
 
-        ATTEMPT_COUNT=1
+        ATTEMPT_COUNT=0
         MAX_ATTEMPTS=5
 
         HEALTHCHECK="http://localhost:${{inputs.port}}${{inputs.healthcheck}}"
 
         echo "Testing healthcheck ${HEALTHCHECK} : Attempt ${ATTEMPT_COUNT} of ${MAX_ATTEMPTS}"
         until $(curl --output /dev/null --silent --head --fail --max-time 5 "${HEALTHCHECK}"); do
-          if [ ${ATTEMPT_COUNT} -eq ${MAX_ATTEMPTS} ];then
+          if [ "$((ATTEMPT_COUNT++))" -gt "${MAX_ATTEMPTS}" ];then
             echo "Container did not pass healthcheck"
             echo $(docker stop test-container) stopped.
             exit 1
           fi
 
-          ATTEMPT_COUNT=$(($ATTEMPT_COUNT+1))
           sleep 5
           echo "Testing healthcheck ${HEALTHCHECK} : Attempt ${ATTEMPT_COUNT} of ${MAX_ATTEMPTS}"
         done
