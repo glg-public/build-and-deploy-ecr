@@ -54,7 +54,7 @@ runs:
         # Healthcheck the built container
         docker run -d \
         -p ${{inputs.port}}:${{inputs.port}} -e "PORT=${{inputs.port}}" \
-        -e "HEALTHCHECK=${{inputs.healthcheck}} \
+        -e "HEALTHCHECK=${{inputs.healthcheck}}" \
         --name test-container $CONTAINER_IMAGE_SHA
 
         ATTEMPT_COUNT=1
