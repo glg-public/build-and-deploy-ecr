@@ -26,10 +26,7 @@ inputs:
     description: "The port the server listens on"
     required: false
     default: 3000
-  skip_healthcheck_because_my_container_is_special_and_does_not_need_one:
-    description: "A feature most devs should not use"
-    required: false
-    default: false
+
 runs:
   using: "composite"
   steps:
@@ -55,7 +52,7 @@ runs:
           $ARG_GITHUB_SHA \
           . 
 
-        if [ {{inputs.skip_healthcheck_because_my_container_is_special_and_does_not_need_one}} = "false" ]; then
+        if [ -n "${{inputs.healthcheck}}" ]; then
           # Healthcheck the built container
           docker run -d \
             -p ${{inputs.port}}:${{inputs.port}} -e "PORT=${{inputs.port}}" \
