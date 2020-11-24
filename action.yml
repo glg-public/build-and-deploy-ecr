@@ -26,6 +26,10 @@ inputs:
     description: "The port the server listens on"
     required: false
     default: 3000
+  skip_healthcheck_because_my_container_is_special_and_does_not_need_one:
+    description: "A feature most devs should not use"
+    required: false
+    default: false
 runs:
   using: "composite"
   steps:
@@ -51,30 +55,32 @@ runs:
           $ARG_GITHUB_SHA \
           . 
 
-        # Healthcheck the built container
-        docker run -d \
-        -p ${{inputs.port}}:${{inputs.port}} -e "PORT=${{inputs.port}}" \
-        -e "HEALTHCHECK=${{inputs.healthcheck}}" \
-        --name test-container $CONTAINER_IMAGE_SHA
+        if [ {{inputs.skip_healthcheck_because_my_container_is_special_and_does_not_need_one}} = "false" ]; then
+          # Healthcheck the built container
+          docker run -d \
+            -p ${{inputs.port}}:${{inputs.port}} -e "PORT=${{inputs.port}}" \
+            -e "HEALTHCHECK=${{inputs.healthcheck}}" \
+            --name test-container $CONTAINER_IMAGE_SHA
 
-        ATTEMPT_COUNT=0
-        MAX_ATTEMPTS=5
+          ATTEMPT_COUNT=0
+          MAX_ATTEMPTS=5
 
-        HEALTHCHECK="http://localhost:${{inputs.port}}${{inputs.healthcheck}}"
+          HEALTHCHECK="http://localhost:${{inputs.port}}${{inputs.healthcheck}}"
 
-        until $(curl --output /dev/null --silent --head --fail --max-time 5 "${HEALTHCHECK}"); do
-          if [ "$((++ATTEMPT_COUNT))" -gt "${MAX_ATTEMPTS}" ];then
-            echo "Container did not pass healthcheck"
-            echo $(docker stop test-container) stopped.
-            exit 1
-          fi
+          until $(curl --output /dev/null --silent --head --fail --max-time 5 "${HEALTHCHECK}"); do
+            if [ "$((++ATTEMPT_COUNT))" -gt "${MAX_ATTEMPTS}" ];then
+              echo "Container did not pass healthcheck"
+              echo $(docker stop test-container) stopped.
+              exit 1
+            fi
 
-          sleep 5
-          echo "Tested healthcheck ${HEALTHCHECK} : Attempt ${ATTEMPT_COUNT} of ${MAX_ATTEMPTS}"
-        done
+            sleep 5
+            echo "Tested healthcheck ${HEALTHCHECK} : Attempt ${ATTEMPT_COUNT} of ${MAX_ATTEMPTS}"
+          done
 
-        echo "Healthcheck passed!"
-        echo $(docker stop test-container) stopped.
+          echo "Healthcheck passed!"
+          echo $(docker stop test-container) stopped.
+        fi
 
         [ "${{inputs.deploy}}" = "true" ] \
           && docker push $CONTAINER_IMAGE_SHA \
