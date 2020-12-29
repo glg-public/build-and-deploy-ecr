@@ -50,7 +50,7 @@ runs:
           -t $CONTAINER_IMAGE_LATEST \
           $ARG_GITHUB_SSH_KEY \
           $ARG_GITHUB_SHA \
-          . 
+          .
 
         if [ -n "${{inputs.healthcheck}}" ]; then
           # Healthcheck the built container
@@ -67,7 +67,7 @@ runs:
 
           until $(curl --output /dev/null --silent --head --fail --max-time 5 "${HEALTHCHECK}"); do
             if [ "$((++ATTEMPT_COUNT))" -gt "${MAX_ATTEMPTS}" ];then
-              echo "Container did not pass healthcheck"
+              echo "::error::Container did not pass healthcheck"
               echo $(docker stop test-container) stopped.
               exit 1
             fi
