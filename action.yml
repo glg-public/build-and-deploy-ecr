@@ -5,6 +5,10 @@ inputs:
     description: "Whether to push the image to ECR after building it"
     required: false
     default: "true"
+  dockerfile:
+    description: Custom Dockerfile name
+    required: false
+    default: ""
   ecr_uri:
     description: "The URI for the ECR repository"
     required: true
@@ -44,10 +48,14 @@ runs:
         [ -n "${{inputs.github_ssh_key}}" ] && ARG_GITHUB_SSH_KEY='--build-arg "GITHUB_SSH_KEY=${{inputs.github_ssh_key}}"'
         # Only include the GITHUB_SHA if it is used (supresses a warning)
         grep -q "GITHUB_SHA" ./Dockerfile > /dev/null && ARG_GITHUB_SHA='--build-arg "GITHUB_SHA=${{github.sha}}"'
+        if [ -n "${{ inputs.dockerfile }}" ]; then
+          CUSTOM_DOCKERFILE="-f ${{ inputs.dockerfile }}"
+        fi
 
         eval docker build \
           -t $CONTAINER_IMAGE_SHA \
           -t $CONTAINER_IMAGE_LATEST \
+          $CUSTOM_DOCKERFILE \
           $ARG_GITHUB_SSH_KEY \
           $ARG_GITHUB_SHA \
           .
