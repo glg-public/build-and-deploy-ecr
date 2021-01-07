@@ -55,7 +55,7 @@ runs:
         if [ -n "${{inputs.healthcheck}}" ]; then
           # Healthcheck the built container
           docker run -d \
-            -p ${{inputs.port}}:${{inputs.port}} -e "PORT=${{inputs.port}}" \
+            -p ${{inputs.port}}:${{inputs.port}} \
             -e "HEALTHCHECK=${{inputs.healthcheck}}" \
             -e "PORT=${{inputs.port}}" \
             --name test-container $CONTAINER_IMAGE_SHA
