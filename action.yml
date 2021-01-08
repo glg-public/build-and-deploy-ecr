@@ -49,7 +49,7 @@ runs:
 
         # ensure the dockerfile exists and is readable
         if [ -n "${{ inputs.dockerfile }}" ] && [ ! -r "${{ inputs.dockerfile }}" ]; then
-          echo '::error::`${{ inputs.dockerfile }} was not found. Conatiner cannot be built.'
+          echo '::error::`${{ inputs.dockerfile }} was not found. If your Dockerfile has a custom name, please specify it using the `dockerfile: Dockerfile.prod` param.'
           exit 2
         fi
 
