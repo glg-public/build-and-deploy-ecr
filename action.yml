@@ -8,7 +8,7 @@ inputs:
   dockerfile:
     description: Custom Dockerfile name
     required: false
-    default: ""
+    default: Dockerfile
   ecr_uri:
     description: "The URI for the ECR repository"
     required: true
@@ -47,8 +47,8 @@ runs:
         # Only include the GITHUB_SSH_KEY if it exists
         [ -n "${{inputs.github_ssh_key}}" ] && ARG_GITHUB_SSH_KEY='--build-arg "GITHUB_SSH_KEY=${{inputs.github_ssh_key}}"'
         # Only include the GITHUB_SHA if it is used (supresses a warning)
-        grep -q "GITHUB_SHA" ./Dockerfile > /dev/null && ARG_GITHUB_SHA='--build-arg "GITHUB_SHA=${{github.sha}}"'
-        if [ -n "${{ inputs.dockerfile }}" ]; then
+        grep -q "GITHUB_SHA" ./${{ inputs.dockerfile }} > /dev/null && ARG_GITHUB_SHA='--build-arg "GITHUB_SHA=${{github.sha}}"'
+        if [ -n "${{ inputs.dockerfile }}" ] && [ "${{ inputs.dockerfile }}" != "Dockerfile" ]; then
           CUSTOM_DOCKERFILE="-f ${{ inputs.dockerfile }}"
         fi
 
