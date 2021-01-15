@@ -73,12 +73,7 @@ runs:
             -p ${{inputs.port}}:${{inputs.port}} \
             -e "HEALTHCHECK=${{inputs.healthcheck}}" \
             -e "PORT=${{inputs.port}}" \
-            --name test-container $CONTAINER_IMAGE_SHA 2>&1 > test-container-output || {
-              code=$?
-              echo "::error::Container failed to `docker run` with exit code $code"
-              cat test-container-output
-              echo 3
-              }
+            --name test-container $CONTAINER_IMAGE_SHA
 
           ATTEMPT_COUNT=0
           MAX_ATTEMPTS=5
@@ -94,6 +89,8 @@ runs:
 
             sleep 5
             echo "Tested healthcheck ${HEALTHCHECK} : Attempt ${ATTEMPT_COUNT} of ${MAX_ATTEMPTS}"
+            echo "`docker run` output:"
+            docker logs test-container
           done
 
           echo "Healthcheck passed!"
