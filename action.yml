@@ -59,6 +59,14 @@ runs:
           CUSTOM_DOCKERFILE="-f ${{ inputs.dockerfile }}"
         fi
 
+        eval docker build \
+          -t $CONTAINER_IMAGE_SHA \
+          -t $CONTAINER_IMAGE_LATEST \
+          $CUSTOM_DOCKERFILE \
+          $ARG_GITHUB_SSH_KEY \
+          $ARG_GITHUB_SHA \
+          .
+
         # read environment variables from workflow YAML
         # If they are specified, we pass them along in the docker run commmand
         ENV_VARIABLES=$(python -c 'import yaml,sys;result=yaml.safe_load(sys.stdin);print(" -e ".join(result["jobs"]["build-and-deploy"]["steps"].pop()["env"].keys()))' < .github/workflows/build-and-push-to-ecr.yml)
@@ -66,28 +74,11 @@ runs:
           ENV_VARIABLES="-e $ENV_VARIABLES"
         fi
 
-          echo ::info::docker build \
-          -t $CONTAINER_IMAGE_SHA \
-          -t $CONTAINER_IMAGE_LATEST \
-          $CUSTOM_DOCKERFILE \
-          $ARG_GITHUB_SSH_KEY \
-          $ARG_GITHUB_SHA \
-          $ENV_VARIABLES \
-          .
-
-        eval docker build \
-          -t $CONTAINER_IMAGE_SHA \
-          -t $CONTAINER_IMAGE_LATEST \
-          $CUSTOM_DOCKERFILE \
-          $ARG_GITHUB_SSH_KEY \
-          $ARG_GITHUB_SHA \
-          $ENV_VARIABLES \
-          .
-
         if [ -n "${{inputs.healthcheck}}" ]; then
           # Healthcheck the built container
           docker run -d \
             -p ${{inputs.port}}:${{inputs.port}} \
+            $ENV_VARIABLES \
             -e "HEALTHCHECK=${{inputs.healthcheck}}" \
             -e "PORT=${{inputs.port}}" \
             --name test-container $CONTAINER_IMAGE_SHA
