@@ -89,7 +89,7 @@ runs:
 
             sleep 5
             echo "Tested healthcheck ${HEALTHCHECK} : Attempt ${ATTEMPT_COUNT} of ${MAX_ATTEMPTS}"
-            echo "`docker run` output:"
+            echo "docker run output:"
             docker logs test-container
           done
 
