@@ -66,6 +66,15 @@ runs:
           ENV_VARIABLES="-e $ENV_VARIABLES"
         fi
 
+          echo ::info::docker build \
+          -t $CONTAINER_IMAGE_SHA \
+          -t $CONTAINER_IMAGE_LATEST \
+          $CUSTOM_DOCKERFILE \
+          $ARG_GITHUB_SSH_KEY \
+          $ARG_GITHUB_SHA \
+          $ENV_VARIABLES \
+          .
+
         eval docker build \
           -t $CONTAINER_IMAGE_SHA \
           -t $CONTAINER_IMAGE_LATEST \
