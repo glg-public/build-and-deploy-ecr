@@ -63,9 +63,8 @@ runs:
         # If they are specified, we pass them along in the docker run commmand
         ENV_VARIABLES=$(python -c 'import yaml,sys;result=yaml.safe_load(sys.stdin);print(" -e ".join(result["jobs"]["build-and-deploy"]["steps"].pop()["env"].keys()))' < .github/workflows/build-and-push-to-ecr.yml)
         if [ -n "$ENV_VARIABLES" ]; then
-          ENV_VARIABLES="-e $VARIABLES"
+          ENV_VARIABLES="-e $ENV_VARIABLES"
         fi
-
 
         eval docker build \
           -t $CONTAINER_IMAGE_SHA \
