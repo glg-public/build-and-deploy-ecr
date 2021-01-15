@@ -69,7 +69,7 @@ runs:
 
         # read environment variables from workflow YAML
         # If they are specified, we pass them along in the docker run commmand
-        ENV_VARIABLES=$(python -c 'import yaml,sys;result=yaml.safe_load(sys.stdin);print(" -e ".join(result["jobs"]["build-and-deploy"]["steps"].pop()["env"].keys()))' < .github/workflows/build-and-push-to-ecr.yml)
+        ENV_VARIABLES=$(python -c 'import yaml,sys;result=yaml.safe_load(sys.stdin);print(" -e ".join(result["jobs"]["build-and-deploy"]["steps"].pop()["env"].keys()))' < .github/workflows/build-and-push-to-ecr.yml 2> /dev/null || true)
         if [ -n "$ENV_VARIABLES" ]; then
           ENV_VARIABLES="-e $ENV_VARIABLES"
         fi
