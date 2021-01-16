@@ -91,8 +91,9 @@ runs:
           until $(curl --output /dev/null --silent --head --fail --max-time 5 "${HEALTHCHECK}"); do
             if [ "$((++ATTEMPT_COUNT))" -gt "${MAX_ATTEMPTS}" ];then
               echo "::error::Container did not pass healthcheck at $HEALTHCHECK after $MAX_ATTEMPTS attampts"
-              echo "docker run output:"
+              echo "::group::docker logs"
               docker logs test-container
+              echo "::endgroup::"
               echo $(docker stop test-container) stopped.
               exit 1
             fi
