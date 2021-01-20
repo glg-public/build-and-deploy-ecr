@@ -14,7 +14,7 @@ inputs:
     required: true
   env_file:
     default: ""
-    description: File containing environment variables required for app to pass healthcheck
+    description: File containing environment variables required for app to run and pass healthcheck
     required: false
   access_key_id:
     description: "An AWS Access Key ID"
