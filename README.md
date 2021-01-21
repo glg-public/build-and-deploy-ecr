@@ -28,8 +28,7 @@ This action requires certain things to be configured in your repo:
 
 ### Config Notes
 
-* `env_file` - The [docker
-  format](https://docs.docker.com/engine/reference/commandline/run/#set-environment-variables--e---env---env-file) for this file is `NAME=value`.
+* `env_file` - The format for this file is `NAME=value` as described in the [docker docs](https://docs.docker.com/engine/reference/commandline/run/#set-environment-variables--e---env---env-file).
   Notice the lack of the `export` keyword.
 
 ## Example Usage
