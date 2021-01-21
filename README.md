@@ -16,13 +16,21 @@ This action requires certain things to be configured in your repo:
 
 | Input | Description | Default |
 |-------|-------------|---------|
-| ecr_uri | The URI of the ECR repository to push to | **REQUIRED** |
 | access_key_id | An AWS Access Key ID | **REQUIRED** |
-| secret_access_key | An AWS Secret Access Key | **REQUIRED** |
 | deploy | Whether to push the image to ECR after building it | `"true"` |
+| dockerfile | Custom Dockerfile path to use to build your image (`prod.Dockerfile`) | `Dockerfile` |
+| ecr_uri | The URI of the ECR repository to push to | **REQUIRED** |
+| env_file | File containing environment variables required for app to run and pass healthcheck | `""` |
 | github_ssh_key | An SSH Private Key with access to any private repos you need | `""` |
 | healthcheck | A healthcheck path, like /healthcheck | `/healthcheck` |
 | port | The port the server listens on | `3000` |
+| secret_access_key | An AWS Secret Access Key | **REQUIRED** |
+
+### Config Notes
+
+* `env_file` - The [docker
+  format](https://docs.docker.com/engine/reference/commandline/run/#set-environment-variables--e---env---env-file) for this file is `NAME=value`.
+  Notice the lack of the `export` keyword.
 
 ## Example Usage
 
