@@ -12,6 +12,10 @@ inputs:
   ecr_uri:
     description: "The URI for the ECR repository"
     required: true
+  env_file:
+    default: ""
+    description: File containing environment variables required for app to run and pass healthcheck
+    required: false
   access_key_id:
     description: "An AWS Access Key ID"
     required: true
@@ -67,10 +71,15 @@ runs:
           $ARG_GITHUB_SHA \
           .
 
+        if [ -n "${{ inputs.env_file }}" ]; then
+          ENV_FILE="--env-file ${{ inputs.env_file }}"
+        fi
+
         if [ -n "${{inputs.healthcheck}}" ]; then
           # Healthcheck the built container
           docker run -d \
             -p ${{inputs.port}}:${{inputs.port}} \
+            $ENV_FILE \
             -e "HEALTHCHECK=${{inputs.healthcheck}}" \
             -e "PORT=${{inputs.port}}" \
             --name test-container $CONTAINER_IMAGE_SHA
@@ -83,6 +92,9 @@ runs:
           until $(curl --output /dev/null --silent --head --fail --max-time 5 "${HEALTHCHECK}"); do
             if [ "$((++ATTEMPT_COUNT))" -gt "${MAX_ATTEMPTS}" ];then
               echo "::error::Container did not pass healthcheck at $HEALTHCHECK after $MAX_ATTEMPTS attampts"
+              echo "::group::docker logs"
+              docker logs test-container
+              echo "::endgroup::"
               echo $(docker stop test-container) stopped.
               exit 1
             fi
