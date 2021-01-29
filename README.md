@@ -17,7 +17,7 @@ This action requires certain things to be configured in your repo:
 | Input | Description | Default |
 |-------|-------------|---------|
 | access_key_id | An AWS Access Key ID | **REQUIRED** |
-| build_config | Config file used during `docker build` (example `webpack.config.js`) to install your app | **REQUIRED** |
+| build_config | Config file used during `docker build` usually `postinstall` (example `webpack.config.js`) to install your app (**DO NOT BUILD YOUR APP IN `npm install`**)| `""` |
 | deploy | Whether to push the image to ECR after building it | `"true"` |
 | dockerfile | Custom Dockerfile path to use to build your image (`prod.Dockerfile`) | `Dockerfile` |
 | ecr_uri | The URI of the ECR repository to push to | **REQUIRED** |
