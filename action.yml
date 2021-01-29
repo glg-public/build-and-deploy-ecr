@@ -1,6 +1,10 @@
 name: "Build and Deploy to ECR"
 description: "Builds an image from a dockerfile, and pushes it up to ECR"
 inputs:
+  build_config:
+    description: File used during build (usually in postinstall) to install your app
+    required: false
+    default: ""
   deploy:
     description: "Whether to push the image to ECR after building it"
     required: false
@@ -63,10 +67,15 @@ runs:
           CUSTOM_DOCKERFILE="-f ${{ inputs.dockerfile }}"
         fi
 
+        if [ -n "${{ inputs.build_config }}" ]; then
+          ARG_BUILD_CONFIG='--build-arg "BUILD_CONFIG=${{ inputs.build_config }}"'
+        fi
+
         eval docker build \
           -t $CONTAINER_IMAGE_SHA \
           -t $CONTAINER_IMAGE_LATEST \
           $CUSTOM_DOCKERFILE \
+          $ARG_BUILD_CONFIG \
           $ARG_GITHUB_SSH_KEY \
           $ARG_GITHUB_SHA \
           .
