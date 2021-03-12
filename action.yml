@@ -43,6 +43,11 @@ runs:
   using: "composite"
   steps:
     - run: |
+        # Did we even input, bro?
+        test -z "${{inputs.ecr_uri}}" && echo '::error::The ecr_ui input is blank. This probably means that your secret is blank or does not exist.' && exit 2
+        test -z "${{inputs.access_key_id}}" && echo '::error::The access_key_id input is blank. This probably means that your secret is blank or does not exist.' && exit 2
+        test -z "${{inputs.secret_access_key}}" && echo '::error::The secret_access_key input is blank. This probably means that your secret is blank or does not exist.' && exit 2
+
         BRANCH=$(echo ${{github.ref}} | cut -f3 -d'/')
         CONTAINER_IMAGE="${{inputs.ecr_uri}}/github/${{github.repository}}/${BRANCH}"
         CONTAINER_IMAGE=$(echo "$CONTAINER_IMAGE" | tr '[:upper:]' '[:lower:]')
@@ -100,7 +105,8 @@ runs:
 
           until $(curl --output /dev/null --silent --head --fail --max-time 5 "${HEALTHCHECK}"); do
             if [ "$((++ATTEMPT_COUNT))" -gt "${MAX_ATTEMPTS}" ];then
-              echo "::error::Container did not pass healthcheck at $HEALTHCHECK after $MAX_ATTEMPTS attampts"
+              echo "::error::Container did not pass healthcheck at $HEALTHCHECK after $MAX_ATTEMPTS attempts"
+              echo "::warning::If your container does not require a healthcheck (most jobs don't), then set healthcheck to a blank string."
               echo "::group::docker logs"
               docker logs test-container
               echo "::endgroup::"
