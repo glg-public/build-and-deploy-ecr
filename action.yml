@@ -81,7 +81,7 @@ runs:
         fi
 
         if [ ! -z "${{ inputs.use_access_key_in_build }}" ]; then
-          ARG_ACCESS_KEYS='--build arg "AWS_ACCESS_KEY_ID=${{ inputs.access_key_id }}" --build-arg "AWS_SECRET_ACCESS_KEY=${{ inputs.secret_access_key }}"'
+          ARG_ACCESS_KEYS='--build-arg "AWS_ACCESS_KEY_ID=${{ inputs.access_key_id }}" --build-arg "AWS_SECRET_ACCESS_KEY=${{ inputs.secret_access_key }}"'
         fi
 
         eval docker build \
