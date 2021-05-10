@@ -13,6 +13,10 @@ inputs:
     description: Custom Dockerfile name
     required: false
     default: Dockerfile
+  use_access_key_in_build:
+    description: "Whether to provide the AWS access keys during the docker build as --build-arg"
+    required: false
+    default: ""
   ecr_uri:
     description: "The URI for the ECR repository"
     required: true
@@ -76,6 +80,10 @@ runs:
           ARG_BUILD_CONFIG='--build-arg "BUILD_CONFIG=${{ inputs.build_config }}"'
         fi
 
+        if [ ! -z "${{ inputs.use_access_key_in_build }}" ]; then
+          ARG_ACCESS_KEYS='--build arg "AWS_ACCESS_KEY_ID=${{ inputs.access_key_id }}" --build-arg "AWS_SECRET_ACCESS_KEY=${{ inputs.secret_access_key }}"'
+        fi
+
         eval docker build \
           -t $CONTAINER_IMAGE_SHA \
           -t $CONTAINER_IMAGE_LATEST \
@@ -83,6 +91,7 @@ runs:
           $ARG_BUILD_CONFIG \
           $ARG_GITHUB_SSH_KEY \
           $ARG_GITHUB_SHA \
+          $ARG_ACCESS_KEYS \
           .
 
         if [ -n "${{ inputs.env_file }}" ]; then

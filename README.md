@@ -20,6 +20,7 @@ This action requires certain things to be configured in your repo:
 | build_config | Config file used during `docker build` usually `postinstall` (example `webpack.config.js`) to install your app. Do not build your app in `npm install`. | `""` |
 | deploy | Whether to push the image to ECR after building it | `"true"` |
 | dockerfile | Custom Dockerfile path to use to build your image (`prod.Dockerfile`) | `Dockerfile` |
+| use_access_key_in_build | Provide the AWS access keys as --build-arg during the build |
 | ecr_uri | The URI of the ECR repository to push to | **REQUIRED** |
 | env_file | File containing environment variables required for app to run and pass healthcheck | `""` |
 | github_ssh_key | An SSH Private Key with access to any private repos you need | `""` |
