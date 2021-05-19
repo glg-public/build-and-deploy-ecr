@@ -5,11 +5,17 @@ This github action builds a docker image from a dockerfile, healthchecks it, and
 
 This action requires certain things to be configured in your repo:
 
-1. You must have a **dockerfile** in the root directory of your repo.
-2. You must have the following **secrets** present in your repository. These should be added automatically by a different process.
-    1. `ECR_URI`
-    2. `ECR_AWS_ACCESS_KEY_ID`
-    3. `ECR_AWS_SECRET_ACCESS_KEY`
+1. You must have a **Dockerfile** in the root directory of your repo.
+
+2. You must have the required **secrets** present in your repository. These will be named similar to the following examples:
+    1. `{AWS_ACCOUNT_NAME}_ECR_URI`
+    2. `{AWS_ACCOUNT_NAME}_ECR_AWS_ACCESS_KEY_ID`
+    3. `{AWS_ACCOUNT_NAME}_ECR_AWS_SECRET_ACCESS_KEY`
+    
+    The secrets will be generated automatically, if you use the [glgroup cli](https://github.com/glg/cli) to register your repository.
+    
+    These secrets values should then be assigned to the corresponding configuration inputs.  (see [Example Usage](#example-usage))
+    
 3. This action was developed against the `ubuntu-20.04` github actions environment, and it may not work correctly in a different environment.
 
 ## Configuration
