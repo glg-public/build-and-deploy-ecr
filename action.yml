@@ -13,6 +13,10 @@ inputs:
     description: Custom Dockerfile name
     required: false
     default: Dockerfile
+  image_platform:
+    description: Platforms to build the image to run on
+    required: false
+    default: ""
   ecr_uri:
     description: "The URI for the ECR repository"
     required: true
