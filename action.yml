@@ -159,6 +159,8 @@ runs:
           echo $(docker stop test-container) stopped.
         fi
 
+        # TODO healthckeck the arm image.
+
         [ "${{inputs.deploy}}" = "true" ] \
           && docker push $CONTAINER_IMAGE_AMD64_SHA \
           && docker push $CONTAINER_IMAGE_AMD64_LATEST
