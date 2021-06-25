@@ -163,7 +163,7 @@ runs:
 
         [ "${{inputs.deploy}}" = "true" ] \
           && docker push $CONTAINER_IMAGE_AMD64_SHA \
-          && docker push $CONTAINER_IMAGE_AMD64_LATEST
+          && docker push $CONTAINER_IMAGE_AMD64_LATEST \
           && docker push $CONTAINER_IMAGE_ARM64_SHA \
           && docker push $CONTAINER_IMAGE_ARM64_LATEST \
           && docker manifest create $CONTAINER_IMAGE_LATEST $CONTAINER_IMAGE_AMD64_LATEST $CONTAINER_IMAGE_ARM64_LATEST \
