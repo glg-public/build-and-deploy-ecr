@@ -131,7 +131,7 @@ runs:
           echo $(docker stop test-container) stopped.
         fi
 
-        [ "${{inputs.deploy}}" = "true" ] \
+        if [ "${{inputs.deploy}}" = "true" ]; then
           eval docker build \
             -t $CONTAINER_IMAGE_SHA \
             -t $CONTAINER_IMAGE_LATEST \
@@ -141,4 +141,5 @@ runs:
             $ARG_GITHUB_SSH_KEY \
             $ARG_GITHUB_SHA \
             .
+        fi
       shell: bash
