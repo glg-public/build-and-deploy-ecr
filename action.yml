@@ -87,6 +87,7 @@ runs:
         eval docker build \
           -t $CONTAINER_IMAGE_SHA \
           -t $CONTAINER_IMAGE_LATEST \
+          --platform linux/amd64 --load \
           $CUSTOM_DOCKERFILE \
           $ARG_BUILD_CONFIG \
           $ARG_GITHUB_SSH_KEY \
