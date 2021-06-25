@@ -21,6 +21,10 @@ inputs:
     description: Platforms to build the image to run on
     required: false
     default: ""
+  using_buildx:
+    description: Set to true if docker build is aliased to buildx
+    required: false
+    default: ""
   ecr_uri:
     description: "The URI for the ECR repository"
     required: true
@@ -95,7 +99,11 @@ runs:
         fi
 
         if [ -n "${{ inputs.image_platform }}" ]; then
-          IMAGE_PLATFORM="--platform ${{ inputs.image_platform }} --load"
+          IMAGE_PLATFORM="--platform ${{ inputs.image_platform }}"
+        fi
+
+        if [ -n "${{ inputs.using_buildx }}" ]; then
+          BUILDX_ARGS="--load"
         fi
 
         if [ -n "${{ inputs.build_config }}" ]; then
@@ -106,6 +114,7 @@ runs:
           -t $CONTAINER_IMAGE_AMD64_SHA \
           -t $CONTAINER_IMAGE_AMD64_LATEST \
           $IMAGE_PLATFORM \
+          $BUILDX_ARGS \
           $CUSTOM_DOCKERFILE \
           $ARG_BUILD_CONFIG \
           $ARG_GITHUB_SSH_KEY \
@@ -116,6 +125,7 @@ runs:
           -t $CONTAINER_IMAGE_ARM64_SHA \
           -t $CONTAINER_IMAGE_ARM64_LATEST \
           $IMAGE_PLATFORM \
+          $BUILDX_ARGS \
           $CUSTOM_DOCKERFILE_ARM \
           $ARG_BUILD_CONFIG \
           $ARG_GITHUB_SSH_KEY \
