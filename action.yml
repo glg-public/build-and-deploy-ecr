@@ -163,11 +163,11 @@ runs:
           && docker push $CONTAINER_IMAGE_AMD64_SHA \
           && docker push $CONTAINER_IMAGE_AMD64_LATEST
           && docker push $CONTAINER_IMAGE_ARM64_SHA \
-          && docker push $CONTAINER_IMAGE_ARM64_LATEST
-          && docker manifest create $CONTAINER_IMAGE_LATEST $CONTAINER_IMAGE_AMD64_LATEST $CONTAINER_IMAGE_ARM64_LATEST
-          && docker manifest create $CONTAINER_IMAGE_SHA $CONTAINER_IMAGE_AMD64_SHA $CONTAINER_IMAGE_ARM64_SHA
-          && docker manifest inspect $CONTAINER_IMAGE_LATEST
-          && docker manifest inspect $CONTAINER_IMAGE_SHA
-          && docker manifest push $CONTAINER_IMAGE_LATEST
+          && docker push $CONTAINER_IMAGE_ARM64_LATEST \
+          && docker manifest create $CONTAINER_IMAGE_LATEST $CONTAINER_IMAGE_AMD64_LATEST $CONTAINER_IMAGE_ARM64_LATEST \
+          && docker manifest create $CONTAINER_IMAGE_SHA $CONTAINER_IMAGE_AMD64_SHA $CONTAINER_IMAGE_ARM64_SHA \
+          && docker manifest inspect $CONTAINER_IMAGE_LATEST \
+          && docker manifest inspect $CONTAINER_IMAGE_SHA \
+          && docker manifest push $CONTAINER_IMAGE_LATEST \
           && docker manifest push $CONTAINER_IMAGE_SHA
       shell: bash
