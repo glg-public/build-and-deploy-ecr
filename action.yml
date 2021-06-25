@@ -77,7 +77,7 @@ runs:
         fi
 
         if [ -n "${{ inputs.image_platform }}" ]; then
-          IMAGE_PLATFORM="--platform ${{ inputs.image_platform }} --load"
+          IMAGE_PLATFORM="--platform ${{ inputs.image_platform }} --push"
         fi
 
         if [ -n "${{ inputs.build_config }}" ]; then
@@ -87,7 +87,6 @@ runs:
         eval docker build \
           -t $CONTAINER_IMAGE_SHA \
           -t $CONTAINER_IMAGE_LATEST \
-          $IMAGE_PLATFORM \
           $CUSTOM_DOCKERFILE \
           $ARG_BUILD_CONFIG \
           $ARG_GITHUB_SSH_KEY \
@@ -132,6 +131,13 @@ runs:
         fi
 
         [ "${{inputs.deploy}}" = "true" ] \
-          && docker push $CONTAINER_IMAGE_SHA \
-          && docker push $CONTAINER_IMAGE_LATEST
+          eval docker build \
+            -t $CONTAINER_IMAGE_SHA \
+            -t $CONTAINER_IMAGE_LATEST \
+            $IMAGE_PLATFORM \
+            $CUSTOM_DOCKERFILE \
+            $ARG_BUILD_CONFIG \
+            $ARG_GITHUB_SSH_KEY \
+            $ARG_GITHUB_SHA \
+            .
       shell: bash
