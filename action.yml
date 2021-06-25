@@ -13,6 +13,10 @@ inputs:
     description: Custom Dockerfile name
     required: false
     default: Dockerfile
+  image_platform:
+    description: Platforms to build the image to run on
+    required: false
+    default: ""
   ecr_uri:
     description: "The URI for the ECR repository"
     required: true
@@ -72,6 +76,10 @@ runs:
           CUSTOM_DOCKERFILE="-f ${{ inputs.dockerfile }}"
         fi
 
+        if [ -n "${{ inputs.image_platform }}" ]; then
+          IMAGE_PLATFORM="--platform ${{ inputs.image_platform }} --load"
+        fi
+
         if [ -n "${{ inputs.build_config }}" ]; then
           ARG_BUILD_CONFIG='--build-arg "BUILD_CONFIG=${{ inputs.build_config }}"'
         fi
@@ -79,6 +87,7 @@ runs:
         eval docker build \
           -t $CONTAINER_IMAGE_SHA \
           -t $CONTAINER_IMAGE_LATEST \
+          $IMAGE_PLATFORM \
           $CUSTOM_DOCKERFILE \
           $ARG_BUILD_CONFIG \
           $ARG_GITHUB_SSH_KEY \
