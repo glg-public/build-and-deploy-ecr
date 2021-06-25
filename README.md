@@ -90,3 +90,26 @@ jobs:
         secret_access_key: ${{secrets.ECR_AWS_SECRET_ACCESS_KEY}}
         github_ssh_key: ${{secrets.GITHUB_SSH_KEY}}
 ```
+
+## Example building arm64 images
+```yml
+name: Build Image and Push to ECR
+on: [push]
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@master
+    - uses: docker/setup-qemu-action@27d0a4f181a40b142cce983c5393082c365d1480
+      with:
+        platforms: linux/arm64
+    - uses: docker/setup-buildx-action@0d135e0c2fc0dba0729c1a47ecfcf5a3c7f8579e
+      with:
+        install: true
+        version: latest
+    - uses: glg-public/build-and-deploy-ecr@main
+      with:
+        ecr_uri: ${{secrets.ECR_URI}}
+        access_key_id: ${{secrets.AWS_ACCESS_KEY_ID}}
+        secret_access_key: ${{secrets.ECR_AWS_SECRET_ACCESS_KEY}}
+```
