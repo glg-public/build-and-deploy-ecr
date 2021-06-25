@@ -78,6 +78,7 @@ runs:
 
         if [ -n "${{ inputs.image_platform }}" ]; then
           IMAGE_PLATFORM="--platform ${{ inputs.image_platform }}"
+          echo "::info::using platform ${{ inputs.image_platform }}."
         fi
 
         if [ -n "${{ inputs.build_config }}" ]; then
