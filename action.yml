@@ -42,6 +42,19 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Versions
+      shell: bash
+      # yamllint disable rule:line-length
+      run: |
+        docker version
+        if docker buildx &> /dev/null; then
+          echo 'buildx is enabled'
+          docker buildx version
+        else
+          echo 'buildx unavailable'
+        fi
+        docker info
+
     # yamllint disable rule:line-length
     - name: Validate inputs
       shell: bash
@@ -89,20 +102,28 @@ runs:
           echo ENV_FILE='--env-file ${{ inputs.env_file }}' >> $GITHUB_ENV
         fi
 
+    - name: Docker login
+      shell: bash
+      run: >
+        AWS_ACCESS_KEY_ID="${{ inputs.access_key_id }}"
+        AWS_SECRET_ACCESS_KEY="${{ inputs.secret_access_key }}"
+        aws ecr get-login-password --region "$AWS_REGION"
+        |
+        docker login --username AWS --password-stdin ${{ inputs.ecr_uri }}
+
+    - name: Docker build
+      shell: bash
+      run: >
+        docker build
+        --tag $CONTAINER_IMAGE_SHA
+        --tag $CONTAINER_IMAGE_LATEST
+        $CUSTOM_DOCKERFILE
+        $ARG_BUILD_CONFIG
+        $ARG_GITHUB_SSH_KEY
+        $ARG_GITHUB_SHA
+        .
+
     - run: |
-        AWS_ACCESS_KEY_ID="${{inputs.access_key_id}}" \
-        AWS_SECRET_ACCESS_KEY="${{inputs.secret_access_key}}" \
-          aws ecr get-login-password --region "${AWS_REGION}" | docker login --username AWS --password-stdin ${{inputs.ecr_uri}}
-
-        eval docker build \
-          -t $CONTAINER_IMAGE_SHA \
-          -t $CONTAINER_IMAGE_LATEST \
-          $CUSTOM_DOCKERFILE \
-          $ARG_BUILD_CONFIG \
-          $ARG_GITHUB_SSH_KEY \
-          $ARG_GITHUB_SHA \
-          .
-
         if [ -n "${{inputs.healthcheck}}" ]; then
           # Healthcheck the built container
           docker run -d \
