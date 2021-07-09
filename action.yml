@@ -101,6 +101,7 @@ runs:
         if [ -n "${{inputs.healthcheck}}" ]; then
           # Healthcheck the built container
           docker run -d \
+            --net host \
             -p ${{inputs.port}}:${{inputs.port}} \
             $ENV_FILE \
             -e "HEALTHCHECK=${{inputs.healthcheck}}" \
