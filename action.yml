@@ -1,54 +1,72 @@
-name: "Build and Deploy to ECR"
-description: "Builds an image from a dockerfile, and pushes it up to ECR"
+name: Build and Deploy to ECR
+description: Builds an image from a dockerfile, and pushes it up to ECR
 inputs:
+  architecture:
+    description: Image architecture
+    default: ""
+    required: false
   build_config:
     description: File used during build (usually in postinstall) to install your app
     required: false
     default: ""
   deploy:
-    description: "Whether to push the image to ECR after building it"
+    description: Whether to push the image to ECR after building it
     required: false
     default: "true"
   dockerfile:
     description: Custom Dockerfile name
     required: false
     default: Dockerfile
+  dockerx_push:
+    description: Whether to use the --push flag
+    default: "false"
+    required: false
+  dockerx_load:
+    description: Whether to use the --load flag
+    default: "false"
+    required: false
   ecr_uri:
-    description: "The URI for the ECR repository"
+    description: The URI for the ECR repository
     required: true
   env_file:
     default: ""
     description: File containing environment variables required for app to run and pass healthcheck
     required: false
   access_key_id:
-    description: "An AWS Access Key ID"
+    description: AWS Access Key ID
     required: true
   secret_access_key:
-    description: "An AWS Secret Access Key"
+    description: AWS Secret Access Key
     required: true
   github_ssh_key:
-    description: "An SSH Private Key with access to any private repos you need"
+    description: SSH Private Key with access to any private repos you need
     required: false
     default: ""
   healthcheck:
-    description: "A healthcheck path, like /healthcheck"
+    description: healthcheck path, like /healthcheck
     required: false
-    default: "/healthcheck"
+    default: /healthcheck
+  platform:
+    default: linux/amd64
+    description: Image platform
+    required: false
   port:
-    description: "The port the server listens on"
+    description: Port the server listens on
     required: false
-    default: 3000
+    default: "3000"
 
 runs:
   using: composite
   steps:
     - name: Versions
       shell: bash
+      id: environment
       # yamllint disable rule:line-length
       run: |
         docker version
         if docker buildx &> /dev/null; then
           echo 'buildx is enabled'
+          echo '::set-output name=buildx::true'
           docker buildx version
         else
           echo 'buildx unavailable'
@@ -78,8 +96,15 @@ runs:
         branch=$(cut --fields 3 --delimiter '/' <<< '${{ github.ref }}')
         container_base=$(tr '[:upper:]' '[:lower:]' <<< "${{inputs.ecr_uri}}/github/${{github.repository}}/$branch")
 
-        echo CONTAINER_IMAGE_LATEST=$container_base:latest >> $GITHUB_ENV
-        echo CONTAINER_IMAGE_SHA=$container_base:${{ github.sha }} >> $GITHUB_ENV
+        if [ -n '${{ inputs.architecture }}' ]; then
+          prefix='${{ inputs.architecture }}-'
+        else
+          prefix=
+        fi
+
+        echo BASE_CONTAINER_IMAGE=$container_base >> $GITHUB_ENV
+        echo CONTAINER_IMAGE_LATEST=$container_base:${prefix}latest >> $GITHUB_ENV
+        echo CONTAINER_IMAGE_SHA=$container_base:$prefix${{ github.sha }} >> $GITHUB_ENV
 
         # Only include the GITHUB_SSH_KEY if it exists
         if [ -n '${{ inputs.github_ssh_key }}' ]; then
@@ -102,10 +127,14 @@ runs:
           echo ENV_FILE='--env-file ${{ inputs.env_file }}' >> $GITHUB_ENV
         fi
 
+        if [ '${{ steps.environment.output.buildx }}' = 'true' ]; then
+          echo BUILDX='--push' >> $GITHUB_ENV
+        fi
+
     - name: Docker login
       shell: bash
       run: >
-        AWS_ACCESS_KEY_ID="${{ inputs.access_key_id }}"
+        AWS_ACCESS_KEY_ID='${{ inputs.access_key_id }}'
         AWS_SECRET_ACCESS_KEY="${{ inputs.secret_access_key }}"
         aws ecr get-login-password --region "$AWS_REGION"
         |
@@ -121,10 +150,14 @@ runs:
         $ARG_BUILD_CONFIG
         $ARG_GITHUB_SSH_KEY
         $ARG_GITHUB_SHA
+        $BUILDX
         .
 
-    - run: |
-        if [ -n "${{inputs.healthcheck}}" ]; then
+    - name: Check health
+      # if: ${{ inputs.healthcheck != '' }}
+      shell: bash
+      run: |
+        if [ -n '${{ inputs.healthcheck }}' ]; then
           # Healthcheck the built container
           docker run -d \
             -p ${{inputs.port}}:${{inputs.port}} \
@@ -159,7 +192,10 @@ runs:
           echo '::warning::No healthcheck specified'
         fi
 
-        [ "${{inputs.deploy}}" = "true" ] \
-          && docker push $CONTAINER_IMAGE_SHA \
-          && docker push $CONTAINER_IMAGE_LATEST
+    - name: Push to repository
+      if: ${{ inputs.deploy == 'true' }}
       shell: bash
+      run: |
+        docker push $BASE_CONTAINER_IMAGE --all-tags
+
+        # docker manifest create
