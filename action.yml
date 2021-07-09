@@ -46,6 +46,7 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - run: docker network list
     - run: |
         # Did we even input, bro?
         test -z "${{inputs.ecr_uri}}" && echo '::error::The ecr_uri input is blank. This probably means that your secret is blank or does not exist. Make sure you have registered ecr repository with glgroup register-github-repo' && exit 2
