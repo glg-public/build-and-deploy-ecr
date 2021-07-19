@@ -9,6 +9,14 @@ inputs:
     description: File used during build (usually in postinstall) to install your app
     required: false
     default: ""
+  buildx_load:
+    description: Whether to use the --load flag when building
+    default: "false"
+    required: false
+  buildx_push:
+    description: Whether to use the --push flag when building
+    default: "false"
+    required: false
   deploy:
     description: Whether to push the image to ECR after building it
     required: false
@@ -17,14 +25,6 @@ inputs:
     description: Custom Dockerfile name
     required: false
     default: Dockerfile
-  dockerx_push:
-    description: Whether to use the --push flag
-    default: "false"
-    required: false
-  dockerx_load:
-    description: Whether to use the --load flag
-    default: "false"
-    required: false
   ecr_uri:
     description: The URI for the ECR repository
     required: true
@@ -88,13 +88,17 @@ runs:
           exit 2
         fi
 
+        if ([ '${{ inputs.buildx_load }}' = 'true' ] && [ '${{ steps.environment.output.buildx }}' != 'true' ]) || ([ '${{ inputs.buildx_push }}' = 'true' ] && [ '${{ steps.environment.output.buildx }}' != 'true' ]); then
+          echo '::error::buildx load/push requested while buildx is not enabled. Please check your configuration and try again.'
+          exit 3
+        fi
+
     - name: Setup environment variables
+      id: setup
       shell: bash
       run: |
-        echo AWS_REGION=$(cut --fields 4 --delimiter '.' <<< '${{ inputs.ecr_uri }}') >> $GITHUB_ENV
-
         branch=$(cut --fields 3 --delimiter '/' <<< '${{ github.ref }}')
-        container_base=$(tr '[:upper:]' '[:lower:]' <<< "${{inputs.ecr_uri}}/github/${{github.repository}}/$branch")
+        container_base=$(tr '[:upper:]' '[:lower:]' <<< "${{ inputs.ecr_uri }}/github/${{ github.repository }}/$branch")
 
         if [ -n '${{ inputs.architecture }}' ]; then
           prefix='${{ inputs.architecture }}-'
@@ -102,7 +106,6 @@ runs:
           prefix=
         fi
 
-        echo BASE_CONTAINER_IMAGE=$container_base >> $GITHUB_ENV
         echo CONTAINER_IMAGE_LATEST=$container_base:${prefix}latest >> $GITHUB_ENV
         echo CONTAINER_IMAGE_SHA=$container_base:$prefix${{ github.sha }} >> $GITHUB_ENV
 
@@ -115,7 +118,7 @@ runs:
         fi
 
         # Only include the GITHUB_SHA if it is used (supresses a warning)
-        if [ -n "${{ inputs.dockerfile }}" ] && [ "${{ inputs.dockerfile }}" != "Dockerfile" ]; then
+        if [ -n '${{ inputs.dockerfile }}' ] && [ '${{ inputs.dockerfile }}' != 'Dockerfile' ]; then
           echo CUSTOM_DOCKERFILE='-f ${{ inputs.dockerfile }}' >> $GITHUB_ENV
         fi
 
@@ -131,14 +134,31 @@ runs:
           echo BUILDX='--push' >> $GITHUB_ENV
         fi
 
+        echo "::set-output name=aws-region::$(cut --fields 4 --delimiter '.' <<< '${{ inputs.ecr_uri }}')"
+        echo "::set-output name=base-container-image::$container_base"
+
+    - name: Get ECR login password
+      shell: bash
+      id: get-login-password
+      env:
+        AWS_ACCESS_KEY_ID: ${{ inputs.access_key_id }}
+        AWS_SECRET_ACCESS_KEY: ${{ inputs.secret_access_key }}
+      run: |
+        login_password="$(aws ecr get-login-password --region '${{ steps.setup.output.aws-region }}')"
+
+        if [ -z "$login_password" ]; then
+          echo '::error::Unable to obtain ECR password'
+          exit 4
+        fi
+
+        echo "::set-output name=password::$login_password"
     - name: Docker login
       shell: bash
       run: >
-        AWS_ACCESS_KEY_ID='${{ inputs.access_key_id }}'
-        AWS_SECRET_ACCESS_KEY="${{ inputs.secret_access_key }}"
-        aws ecr get-login-password --region "$AWS_REGION"
-        |
-        docker login --username AWS --password-stdin ${{ inputs.ecr_uri }}
+        docker login
+        --username AWS
+        --password-stdin
+        ${{ inputs.ecr_uri }} <<< '${{ steps.get-login-password.output.password }}'
 
     - name: Docker build
       shell: bash
@@ -159,11 +179,11 @@ runs:
       run: |
         if [ -n '${{ inputs.healthcheck }}' ]; then
           # Healthcheck the built container
-          docker run -d \
-            -p ${{inputs.port}}:${{inputs.port}} \
+          docker run --detach \
+            --publish ${{inputs.port}}:${{inputs.port}} \
             $ENV_FILE \
-            -e "HEALTHCHECK=${{inputs.healthcheck}}" \
-            -e "PORT=${{inputs.port}}" \
+            --env "HEALTHCHECK=${{inputs.healthcheck}}" \
+            --env "PORT=${{inputs.port}}" \
             --name test-container $CONTAINER_IMAGE_SHA
 
           ATTEMPT_COUNT=0
@@ -191,11 +211,12 @@ runs:
         else
           echo '::warning::No healthcheck specified'
         fi
-
-    - name: Push to repository
-      if: ${{ inputs.deploy == 'true' }}
+    - name: Push to ECR
+      # if: ${{ inputs.deploy == 'true' }}
       shell: bash
       run: |
-        docker push $BASE_CONTAINER_IMAGE --all-tags
+        if [ '${{ inputs.deploy }}' = 'true' ]; then
+          docker push ${{ steps.setup.output.base-container-image }} --all-tags
+        fi
 
         # docker manifest create
