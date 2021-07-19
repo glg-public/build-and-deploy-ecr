@@ -134,6 +134,10 @@ runs:
           echo BUILDX='--push' >> $GITHUB_ENV
         fi
 
+        if [ -n '${{ inputs.plaform }}' ]; then
+          echo PLATFORM='--platform ${{ inputs.plaform }}' >> $GITHUB_ENV
+        fi
+
         echo "::set-output name=aws-region::$(cut --fields 4 --delimiter '.' <<< '${{ inputs.ecr_uri }}')"
         echo "::set-output name=base-container-image::$container_base"
 
@@ -171,6 +175,7 @@ runs:
         $ARG_GITHUB_SSH_KEY
         $ARG_GITHUB_SHA
         $BUILDX
+        $PLATFORM
         .
 
     - name: Check health
