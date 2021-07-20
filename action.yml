@@ -64,15 +64,23 @@ runs:
       id: environment
       # yamllint disable rule:line-length
       run: |
+        echo '::group::docker version'
         docker version
-        if docker buildx &> /dev/null; then
-          echo 'buildx is enabled'
-          echo '::set-output name=buildx::enabled'
+        echo '::endgroup'
+
+        echo '::group::docker buildx version'
+        if docker buildx version &> /dev/null; then
           docker buildx version
+          echo '::set-output name=buildx::enabled'
         else
-          echo 'buildx unavailable'
+          echo 'buildx unavailable - $?'
         fi
+        echo '::endgroup'
+
+        echo '::group::docker info'
         docker info
+        echo '::endgroup'
+
 
     # yamllint disable rule:line-length
     - name: Validate inputs
