@@ -158,7 +158,7 @@ runs:
             echo PLATFORM='--platform ${{ inputs.plaform }}' >> $GITHUB_ENV
           fi
 
-          echo BUILDX='--push' >> $GITHUB_ENV
+          echo BUILDX='--load' >> $GITHUB_ENV
         fi
 
         echo "::set-output name=aws-region::$(cut --fields 4 --delimiter '.' <<< '${{ inputs.ecr_uri }}')"
