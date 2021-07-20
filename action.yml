@@ -1,6 +1,9 @@
 name: Build and Deploy to ECR
 description: Builds an image from a dockerfile, and pushes it up to ECR
 inputs:
+  access_key_id:
+    description: AWS Access Key ID
+    required: true
   architecture:
     description: Image architecture
     default: ""
@@ -32,12 +35,6 @@ inputs:
     default: ""
     description: File containing environment variables required for app to run and pass healthcheck
     required: false
-  access_key_id:
-    description: AWS Access Key ID
-    required: true
-  secret_access_key:
-    description: AWS Secret Access Key
-    required: true
   github_ssh_key:
     description: SSH Private Key with access to any private repos you need
     required: false
@@ -55,6 +52,9 @@ inputs:
     description: Port the server listens on
     required: false
     default: "3000"
+  secret_access_key:
+    description: AWS Secret Access Key
+    required: true
 
 runs:
   using: composite
