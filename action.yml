@@ -98,7 +98,7 @@ runs:
         fi
 
         # check for buildx flags when buildx is not enabled
-        if [ '${{ steps.environment.output.buildx }}' != 'enabled' ]; then
+        if [ '${{ steps.environment.outputs.buildx }}' != 'enabled' ]; then
           # can we use build and push together?
           if [ '${{ inputs.buildx_load }}' = 'true' ]; then
             echo '::error::buildx load requested while buildx is not enabled. Please check your configuration and try again.'
@@ -153,7 +153,7 @@ runs:
           echo ENV_FILE='--env-file ${{ inputs.env_file }}' >> $GITHUB_ENV
         fi
 
-        if [ '${{ steps.environment.output.buildx }}' = 'true' ]; then
+        if [ '${{ steps.environment.outputs.buildx }}' = 'true' ]; then
           if [ -n '${{ inputs.plaform }}' ]; then
             echo PLATFORM='--platform ${{ inputs.plaform }}' >> $GITHUB_ENV
           fi
@@ -171,7 +171,7 @@ runs:
         AWS_ACCESS_KEY_ID: ${{ inputs.access_key_id }}
         AWS_SECRET_ACCESS_KEY: ${{ inputs.secret_access_key }}
       run: |
-        login_password="$(aws ecr get-login-password --region '${{ steps.setup.output.aws-region }}')"
+        login_password="$(aws ecr get-login-password --region '${{ steps.setup.outputs.aws-region }}')"
 
         if [ -z "$login_password" ]; then
           echo '::error::Unable to obtain ECR password'
@@ -185,7 +185,7 @@ runs:
         docker login
         --username AWS
         --password-stdin
-        ${{ inputs.ecr_uri }} <<< '${{ steps.get-login-password.output.password }}'
+        ${{ inputs.ecr_uri }} <<< '${{ steps.get-login-password.outputs.password }}'
 
     - name: Docker build
       shell: bash
@@ -244,7 +244,7 @@ runs:
       shell: bash
       run: |
         if [ '${{ inputs.deploy }}' = 'true' ]; then
-          docker push ${{ steps.setup.output.base-container-image }} --all-tags
+          docker push ${{ steps.setup.outputs.base-container-image }} --all-tags
         fi
 
         # docker manifest create
