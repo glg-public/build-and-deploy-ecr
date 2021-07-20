@@ -47,7 +47,8 @@ inputs:
     required: false
     default: /healthcheck
   platform:
-    default: linux/amd64
+    # default: linux/amd64
+    default: ""
     description: Image platform
     required: false
   port:
@@ -66,7 +67,7 @@ runs:
         docker version
         if docker buildx &> /dev/null; then
           echo 'buildx is enabled'
-          echo '::set-output name=buildx::true'
+          echo '::set-output name=buildx::enabled'
           docker buildx version
         else
           echo 'buildx unavailable'
@@ -88,9 +89,23 @@ runs:
           exit 2
         fi
 
-        if ([ '${{ inputs.buildx_load }}' = 'true' ] && [ '${{ steps.environment.output.buildx }}' != 'true' ]) || ([ '${{ inputs.buildx_push }}' = 'true' ] && [ '${{ steps.environment.output.buildx }}' != 'true' ]); then
-          echo '::error::buildx load/push requested while buildx is not enabled. Please check your configuration and try again.'
-          exit 3
+        # check for buildx flags when buildx is not enabled
+        if [ '${{ steps.environment.output.buildx }}' != 'enabled' ]; then
+          # can we use build and push together?
+          if [ '${{ inputs.buildx_load }}' = 'true' ]; then
+            echo '::error::buildx load requested while buildx is not enabled. Please check your configuration and try again.'
+            exit 3
+          fi
+
+          if [ '${{ inputs.buildx_push }}' = 'true' ]; then
+            echo '::error::buildx push requested while buildx is not enabled. Please check your configuration and try again.'
+            exit 3
+          fi
+
+          if [ -n '${{ inputs.platform }}' ]; then
+            echo '::error::platform requested while buildx is not enabled. Please check your configuration and try again.'
+            exit 3
+          fi
         fi
 
     - name: Setup environment variables
@@ -131,11 +146,11 @@ runs:
         fi
 
         if [ '${{ steps.environment.output.buildx }}' = 'true' ]; then
-          echo BUILDX='--push' >> $GITHUB_ENV
-        fi
+          if [ -n '${{ inputs.plaform }}' ]; then
+            echo PLATFORM='--platform ${{ inputs.plaform }}' >> $GITHUB_ENV
+          fi
 
-        if [ -n '${{ inputs.plaform }}' ]; then
-          echo PLATFORM='--platform ${{ inputs.plaform }}' >> $GITHUB_ENV
+          echo BUILDX='--push' >> $GITHUB_ENV
         fi
 
         echo "::set-output name=aws-region::$(cut --fields 4 --delimiter '.' <<< '${{ inputs.ecr_uri }}')"
