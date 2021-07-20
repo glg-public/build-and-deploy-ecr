@@ -130,7 +130,7 @@ runs:
         fi
 
         echo CONTAINER_IMAGE_LATEST=$container_base:${prefix}latest >> $GITHUB_ENV
-        echo CONTAINER_IMAGE_SHA=$container_base:$prefix${{ github.sha }} >> $GITHUB_ENV
+        echo CONTAINER_IMAGE_SHA=$container_base:${prefix}${{ github.sha }} >> $GITHUB_ENV
 
         # Only include the GITHUB_SSH_KEY if it exists
         if [ -n '${{ inputs.github_ssh_key }}' ]; then
