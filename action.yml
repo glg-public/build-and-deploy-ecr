@@ -187,6 +187,22 @@ runs:
         --password-stdin
         ${{ inputs.ecr_uri }} <<< '${{ steps.get-login-password.outputs.password }}'
 
+    - name: DEBUG Docker build
+      shell: bash
+      run: >
+        echo
+        docker build
+        --tag $CONTAINER_IMAGE_SHA
+        --tag $CONTAINER_IMAGE_LATEST
+        $CUSTOM_DOCKERFILE
+        $ARG_BUILD_CONFIG
+        $ARG_GITHUB_SSH_KEY
+        $ARG_GITHUB_SHA
+        $BUILDX
+        $PLATFORM
+        $ARCHITECTURE
+        .
+
     - name: Docker build
       shell: bash
       run: >
@@ -199,6 +215,7 @@ runs:
         $ARG_GITHUB_SHA
         $BUILDX
         $PLATFORM
+        $ARCHITECTURE
         .
 
     - name: Check health
