@@ -84,7 +84,7 @@ runs:
           ARG_BUILD_CONFIG='--build-arg "BUILD_CONFIG=${{ inputs.build_config }}"'
         fi
 
-        eval docker build \
+        eval docker build --progress=plain --no-cache \
           -t $CONTAINER_IMAGE_SHA \
           -t $CONTAINER_IMAGE_LATEST \
           $IMAGE_PLATFORM \
