@@ -170,7 +170,7 @@ runs:
 
         echo "::set-output name=aws-region::$(cut --fields 4 --delimiter '.' <<< '${{ inputs.ecr_uri }}')"
         echo "::set-output name=base-container-image::$container_base"
-        echo '::set-output name=github-sha::${{ gihub.sha }}'
+        echo '::set-output name=github-sha::${{ github.sha }}'
 
     - name: Get ECR login password
       shell: bash
