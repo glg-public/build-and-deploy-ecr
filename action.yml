@@ -193,8 +193,8 @@ runs:
       run: >
         docker login
         --username AWS
-        --password-stdin
-        ${{ inputs.ecr_uri }} <<< '${{ steps.get-login-password.outputs.password }}'
+        --password '${{ steps.get-login-password.outputs.password }}'
+        ${{ inputs.ecr_uri }}
 
     - name: DEBUG Docker build
       shell: bash
