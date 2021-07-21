@@ -56,6 +56,14 @@ inputs:
     description: AWS Secret Access Key
     required: true
 
+outputs:
+  base-container-image:
+    description: base image URI of the container without a tag
+    value: ${{ steps.setup.outputs.base-container-image }}
+  github-sha:
+    description: current github commit sha that triggered the workflow
+    value: ${{ steps.setup.outputs.github-sha }}
+
 runs:
   using: composite
   steps:
@@ -162,6 +170,7 @@ runs:
 
         echo "::set-output name=aws-region::$(cut --fields 4 --delimiter '.' <<< '${{ inputs.ecr_uri }}')"
         echo "::set-output name=base-container-image::$container_base"
+        echo '::set-output name=github-sha::${{ gihub.sha }}'
 
     - name: Get ECR login password
       shell: bash
@@ -171,6 +180,7 @@ runs:
         AWS_SECRET_ACCESS_KEY: ${{ inputs.secret_access_key }}
       run: |
         login_password="$(aws ecr get-login-password --region '${{ steps.setup.outputs.aws-region }}')"
+        echo "::add-mask::$login_password"
 
         if [ -z "$login_password" ]; then
           echo '::error::Unable to obtain ECR password'
