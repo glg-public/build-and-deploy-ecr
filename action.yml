@@ -66,7 +66,7 @@ runs:
       run: |
         echo '::group::docker version'
         docker version
-        echo '::endgroup'
+        echo '::endgroup::'
 
         echo '::group::docker buildx version'
         if docker buildx version &> /dev/null; then
@@ -75,12 +75,11 @@ runs:
         else
           echo 'buildx unavailable - $?'
         fi
-        echo '::endgroup'
+        echo '::endgroup::'
 
         echo '::group::docker info'
         docker info
-        echo '::endgroup'
-
+        echo '::endgroup::'
 
     # yamllint disable rule:line-length
     - name: Validate inputs
