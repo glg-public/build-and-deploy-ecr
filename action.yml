@@ -153,7 +153,7 @@ runs:
           echo ENV_FILE='--env-file ${{ inputs.env_file }}' >> $GITHUB_ENV
         fi
 
-        if [ '${{ steps.environment.outputs.buildx }}' = 'true' ]; then
+        if [ '${{ steps.environment.outputs.buildx }}' = 'enabled' ]; then
           if [ -n '${{ inputs.plaform }}' ]; then
             echo PLATFORM='--platform ${{ inputs.plaform }}' >> $GITHUB_ENV
           fi
