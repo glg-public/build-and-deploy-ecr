@@ -57,9 +57,9 @@ inputs:
     required: true
 
 outputs:
-  base-container-image:
-    description: base image URI of the container without a tag
-    value: ${{ steps.setup.outputs.base-container-image }}
+  container-path:
+    description: ECR path where image was pushed
+    value: ${{ steps.setup.outputs.container-path }}
   github-sha:
     description: current github commit sha that triggered the workflow
     value: ${{ steps.setup.outputs.github-sha }}
@@ -170,6 +170,7 @@ runs:
 
         echo "::set-output name=aws-region::$(cut --fields 4 --delimiter '.' <<< '${{ inputs.ecr_uri }}')"
         echo "::set-output name=base-container-image::$container_base"
+        echo "::set-output name=container-path::github/${{ github.repository }}/$branch"
         echo '::set-output name=github-sha::${{ github.sha }}'
 
     - name: Get ECR login password
