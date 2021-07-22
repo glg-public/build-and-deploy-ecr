@@ -12,14 +12,6 @@ inputs:
     description: File used during build (usually in postinstall) to install your app
     required: false
     default: ""
-  buildx_load:
-    description: Whether to use the --load flag when building
-    default: "false"
-    required: false
-  buildx_push:
-    description: Whether to use the --push flag when building
-    default: "false"
-    required: false
   deploy:
     description: Whether to push the image to ECR after building it
     required: false
@@ -106,17 +98,6 @@ runs:
 
         # check for buildx flags when buildx is not enabled
         if [ '${{ steps.environment.outputs.buildx }}' != 'enabled' ]; then
-          # can we use build and push together?
-          if [ '${{ inputs.buildx_load }}' = 'true' ]; then
-            echo '::error::buildx load requested while buildx is not enabled. Please check your configuration and try again.'
-            exit 3
-          fi
-
-          if [ '${{ inputs.buildx_push }}' = 'true' ]; then
-            echo '::error::buildx push requested while buildx is not enabled. Please check your configuration and try again.'
-            exit 3
-          fi
-
           if [ -n '${{ inputs.platform }}' ]; then
             echo '::error::platform requested while buildx is not enabled. Please check your configuration and try again.'
             exit 3
@@ -162,15 +143,13 @@ runs:
 
         if [ '${{ steps.environment.outputs.buildx }}' = 'enabled' ]; then
           if [ -n '${{ inputs.plaform }}' ]; then
-            echo PLATFORM='--platform ${{ inputs.plaform }}' >> $GITHUB_ENV
+            echo PLATFORM='--platform ${{ inputs.plaform }} --load' >> $GITHUB_ENV
           fi
-
-          echo BUILDX='--load' >> $GITHUB_ENV
         fi
 
         echo "::set-output name=aws-region::$(cut --fields 4 --delimiter '.' <<< '${{ inputs.ecr_uri }}')"
         echo "::set-output name=base-container-image::$container_base"
-        echo "::set-output name=container-path::github/${{ github.repository }}/$branch"
+        echo "::set-output name=container-path::$(cut --fields 2- --delimiter '/' <<< "$container_base")"
         echo '::set-output name=github-sha::${{ github.sha }}'
 
     - name: Get ECR login password
@@ -197,22 +176,6 @@ runs:
         --password '${{ steps.get-login-password.outputs.password }}'
         ${{ inputs.ecr_uri }}
 
-    - name: DEBUG Docker build
-      shell: bash
-      run: >
-        echo
-        docker build
-        --tag $CONTAINER_IMAGE_SHA
-        --tag $CONTAINER_IMAGE_LATEST
-        $CUSTOM_DOCKERFILE
-        $ARG_BUILD_CONFIG
-        $ARG_GITHUB_SSH_KEY
-        $ARG_GITHUB_SHA
-        $BUILDX
-        $PLATFORM
-        $ARCHITECTURE
-        .
-
     - name: Docker build
       shell: bash
       run: >
@@ -223,13 +186,10 @@ runs:
         $ARG_BUILD_CONFIG
         $ARG_GITHUB_SSH_KEY
         $ARG_GITHUB_SHA
-        $BUILDX
         $PLATFORM
-        $ARCHITECTURE
         .
 
     - name: Check health
-      # if: ${{ inputs.healthcheck != '' }}
       shell: bash
       run: |
         if [ -n '${{ inputs.healthcheck }}' ]; then
@@ -267,11 +227,8 @@ runs:
           echo '::warning::No healthcheck specified'
         fi
     - name: Push to ECR
-      # if: ${{ inputs.deploy == 'true' }}
       shell: bash
       run: |
         if [ '${{ inputs.deploy }}' = 'true' ]; then
           docker push ${{ steps.setup.outputs.base-container-image }} --all-tags
         fi
-
-        # docker manifest create
