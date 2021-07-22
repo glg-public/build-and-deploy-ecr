@@ -142,7 +142,7 @@ runs:
         fi
 
         if [ '${{ steps.environment.outputs.buildx }}' = 'enabled' ]; then
-          if [ -n '${{ inputs.plaform }}' ]; then
+          if [ -n '${{ inputs.platform }}' ]; then
             echo PLATFORM='--platform ${{ inputs.plaform }} --load' >> $GITHUB_ENV
           fi
         fi
