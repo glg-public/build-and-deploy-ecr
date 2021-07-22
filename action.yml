@@ -86,7 +86,7 @@ runs:
       shell: bash
       run: |
         # Did we even input, bro?
-        test -z "${{inputs.ecr_uri}}" && echo '::error::The ecr_ui input is blank. This probably means that your secret is blank or does not exist.' && exit 2
+        test -z "${{inputs.ecr_uri}}" && echo '::error::The ecr_uri input is blank. This probably means that your secret is blank or does not exist. Make sure you have registered ecr repository with glgroup register-github-repo' && exit 2
         test -z "${{inputs.access_key_id}}" && echo '::error::The access_key_id input is blank. This probably means that your secret is blank or does not exist.' && exit 2
         test -z "${{inputs.secret_access_key}}" && echo '::error::The secret_access_key input is blank. This probably means that your secret is blank or does not exist.' && exit 2
 
@@ -195,6 +195,7 @@ runs:
         if [ -n '${{ inputs.healthcheck }}' ]; then
           # Healthcheck the built container
           docker run --detach \
+            --net host \
             --publish ${{inputs.port}}:${{inputs.port}} \
             $ENV_FILE \
             --env "HEALTHCHECK=${{inputs.healthcheck}}" \
