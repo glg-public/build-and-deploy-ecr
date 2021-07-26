@@ -122,8 +122,13 @@ runs:
 
         # Only include the GITHUB_SSH_KEY if it exists
         if [ -n '${{ inputs.github_ssh_key }}' ]; then
-          echo ARG_GITHUB_SSH_KEY='--build-arg "GITHUB_SSH_KEY=${{ inputs.github_ssh_key }}"' >> $GITHUB_ENV
+          # Special handling for multiline environment veriables
+          # https://docs.github.com/en/actions/reference/workflow-commands-for-github-actions#example-6
+          echo 'ARG_GITHUB_SSH_KEY<<EOF' >> $GITHUB_ENV
+          echo '--build-arg "GITHUB_SSH_KEY=${{ inputs.github_ssh_key }}"' >> $GITHUB_ENV
+          echo 'EOF' >> $GITHUB_ENV
         fi
+
         if grep --quiet GITHUB_SHA './${{ inputs.dockerfile }}'; then
           echo ARG_GITHUB_SHA='--build-arg "GITHUB_SHA=${{github.sha}}"' >> $GITHUB_ENV
         fi
