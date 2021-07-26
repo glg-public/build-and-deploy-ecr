@@ -125,7 +125,7 @@ runs:
           # Special handling for multiline environment veriables
           # https://docs.github.com/en/actions/reference/workflow-commands-for-github-actions#example-6
           echo 'ARG_GITHUB_SSH_KEY<<EOF' >> $GITHUB_ENV
-          echo '--build-arg "GITHUB_SSH_KEY=${{ inputs.github_ssh_key }}"' >> $GITHUB_ENV
+          echo '--build-arg GITHUB_SSH_KEY="${{ inputs.github_ssh_key }}"' >> $GITHUB_ENV
           echo 'EOF' >> $GITHUB_ENV
         fi
 
@@ -184,6 +184,7 @@ runs:
     - name: Docker build
       shell: bash
       run: |
+        echo '::debug::$ARG_GITHUB_SSH_KEY lines => '$(echo "$ARG_GITHUB_SSH_KEY" | wc -l)
         set -x
 
         docker build \
