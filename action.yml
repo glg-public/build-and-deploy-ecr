@@ -127,11 +127,11 @@ runs:
           echo 'EOF' >> $GITHUB_ENV
         fi
 
+        # Only include the GITHUB_SHA if it is used (supresses a warning)
         if grep --quiet GITHUB_SHA './${{ inputs.dockerfile }}'; then
-          echo ARG_GITHUB_SHA='--build-arg "GITHUB_SHA=${{github.sha}}"' >> $GITHUB_ENV
+          echo ARG_GITHUB_SHA='--build-arg GITHUB_SHA="${{ github.sha }}"' >> $GITHUB_ENV
         fi
 
-        # Only include the GITHUB_SHA if it is used (supresses a warning)
         if [ -n '${{ inputs.dockerfile }}' ] && [ '${{ inputs.dockerfile }}' != 'Dockerfile' ]; then
           echo CUSTOM_DOCKERFILE='-f ${{ inputs.dockerfile }}' >> $GITHUB_ENV
         fi
