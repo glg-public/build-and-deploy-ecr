@@ -178,16 +178,20 @@ runs:
 
     - name: Docker build
       shell: bash
-      run: >
-        docker build
-        --tag $CONTAINER_IMAGE_SHA
-        --tag $CONTAINER_IMAGE_LATEST
-        $CUSTOM_DOCKERFILE
-        $ARG_BUILD_CONFIG
-        $ARG_GITHUB_SSH_KEY
-        $ARG_GITHUB_SHA
-        $PLATFORM
+      run: |
+        set -x
+
+        docker build \
+        --tag $CONTAINER_IMAGE_SHA \
+        --tag $CONTAINER_IMAGE_LATEST \
+        $CUSTOM_DOCKERFILE \
+        $ARG_BUILD_CONFIG \
+        $ARG_GITHUB_SSH_KEY \
+        $ARG_GITHUB_SHA \
+        $PLATFORM \
         .
+
+        set +x
 
     - name: Check health
       shell: bash
