@@ -1,111 +1,208 @@
-name: "Build and Deploy to ECR"
-description: "Builds an image from a dockerfile, and pushes it up to ECR"
+name: Build and Deploy to ECR
+description: Builds an image from a dockerfile, and pushes it up to ECR
 inputs:
+  access_key_id:
+    description: AWS Access Key ID
+    required: true
+  architecture:
+    description: Image architecture
+    default: ""
+    required: false
   build_config:
     description: File used during build (usually in postinstall) to install your app
     required: false
     default: ""
   deploy:
-    description: "Whether to push the image to ECR after building it"
+    description: Whether to push the image to ECR after building it
     required: false
     default: "true"
   dockerfile:
     description: Custom Dockerfile name
     required: false
     default: Dockerfile
-  image_platform:
-    description: Platforms to build the image to run on
-    required: false
-    default: ""
   ecr_uri:
-    description: "The URI for the ECR repository"
+    description: The URI for the ECR repository
     required: true
   env_file:
     default: ""
     description: File containing environment variables required for app to run and pass healthcheck
     required: false
-  access_key_id:
-    description: "An AWS Access Key ID"
-    required: true
-  secret_access_key:
-    description: "An AWS Secret Access Key"
-    required: true
   github_ssh_key:
-    description: "An SSH Private Key with access to any private repos you need"
+    description: SSH Private Key with access to any private repos you need
     required: false
     default: ""
   healthcheck:
-    description: "A healthcheck path, like /healthcheck"
+    description: healthcheck path, like /healthcheck
     required: false
-    default: "/healthcheck"
+    default: /healthcheck
+  platform:
+    default: ""
+    description: Image platform
+    required: false
   port:
-    description: "The port the server listens on"
+    description: Port the server listens on
     required: false
-    default: 3000
+    default: "3000"
+  secret_access_key:
+    description: AWS Secret Access Key
+    required: true
+
+outputs:
+  container-path:
+    description: ECR path where image was pushed
+    value: ${{ steps.setup.outputs.container-path }}
+  github-sha:
+    description: current github commit sha that triggered the workflow
+    value: ${{ steps.setup.outputs.github-sha }}
 
 runs:
-  using: "composite"
+  using: composite
   steps:
-    - run: |
+    - name: Versions
+      shell: bash
+      id: environment
+      run: |
+        echo '::group::docker version'
+        docker version
+        echo '::endgroup::'
+
+        echo '::group::docker buildx version'
+        if docker buildx version &> /dev/null; then
+          docker buildx version
+          echo '::set-output name=buildx::enabled'
+        else
+          echo 'buildx unavailable - $?'
+        fi
+        echo '::endgroup::'
+
+        echo '::group::docker info'
+        docker info
+        echo '::endgroup::'
+
+    # yamllint disable rule:line-length
+    - name: Validate inputs
+      shell: bash
+      run: |
         # Did we even input, bro?
         test -z "${{inputs.ecr_uri}}" && echo '::error::The ecr_uri input is blank. This probably means that your secret is blank or does not exist. Make sure you have registered ecr repository with glgroup register-github-repo' && exit 2
         test -z "${{inputs.access_key_id}}" && echo '::error::The access_key_id input is blank. This probably means that your secret is blank or does not exist.' && exit 2
         test -z "${{inputs.secret_access_key}}" && echo '::error::The secret_access_key input is blank. This probably means that your secret is blank or does not exist.' && exit 2
 
-        BRANCH=$(echo ${{github.ref}} | cut -f3 -d'/')
-        CONTAINER_IMAGE="${{inputs.ecr_uri}}/github/${{github.repository}}/${BRANCH}"
-        CONTAINER_IMAGE=$(echo "$CONTAINER_IMAGE" | tr '[:upper:]' '[:lower:]')
-        CONTAINER_IMAGE_SHA="${CONTAINER_IMAGE}:${{github.sha}}"
-        CONTAINER_IMAGE_LATEST="${CONTAINER_IMAGE}:latest"
-        AWS_REGION=$(echo "${{inputs.ecr_uri}}" | cut -f4 -d'.')
-        AWS_ACCESS_KEY_ID="${{inputs.access_key_id}}" \
-        AWS_SECRET_ACCESS_KEY="${{inputs.secret_access_key}}" \
-          aws ecr get-login-password --region "${AWS_REGION}" | docker login --username AWS --password-stdin ${{inputs.ecr_uri}}
-        # Only include the GITHUB_SSH_KEY if it exists
-        [ -n "${{inputs.github_ssh_key}}" ] && ARG_GITHUB_SSH_KEY='--build-arg "GITHUB_SSH_KEY=${{inputs.github_ssh_key}}"'
-
         # ensure the dockerfile exists and is readable
-        if [ -n "${{ inputs.dockerfile }}" ] && [ ! -r "${{ inputs.dockerfile }}" ]; then
+        if [ -n '${{ inputs.dockerfile }}' ] && [ ! -r '${{ inputs.dockerfile }}' ]; then
           echo '::error::`${{ inputs.dockerfile }} was not found. If your Dockerfile has a custom name, please specify it using the `dockerfile: Dockerfile.prod` param.'
           exit 2
         fi
 
+        # check for buildx flags when buildx is not enabled
+        if [ '${{ steps.environment.outputs.buildx }}' != 'enabled' ]; then
+          if [ -n '${{ inputs.platform }}' ]; then
+            echo '::error::platform requested while buildx is not enabled. Please check your configuration and try again.'
+            exit 3
+          fi
+        fi
+
+    - name: Setup environment variables
+      id: setup
+      shell: bash
+      run: |
+        branch=$(cut --fields 3 --delimiter '/' <<< '${{ github.ref }}')
+        container_base=$(tr '[:upper:]' '[:lower:]' <<< "${{ inputs.ecr_uri }}/github/${{ github.repository }}/$branch")
+
+        if [ -n '${{ inputs.architecture }}' ]; then
+          prefix='${{ inputs.architecture }}-'
+        else
+          prefix=
+        fi
+
+        echo CONTAINER_IMAGE_LATEST=$container_base:${prefix}latest >> $GITHUB_ENV
+        echo CONTAINER_IMAGE_SHA=$container_base:${prefix}${{ github.sha }} >> $GITHUB_ENV
+
+        # Only include the GITHUB_SSH_KEY if it exists
+        if [ -n '${{ inputs.github_ssh_key }}' ]; then
+          # Special handling for multiline environment veriables
+          # https://docs.github.com/en/actions/reference/workflow-commands-for-github-actions#example-6
+          echo 'ARG_GITHUB_SSH_KEY<<EOF' >> $GITHUB_ENV
+          echo '--build-arg GITHUB_SSH_KEY="${{ inputs.github_ssh_key }}"' >> $GITHUB_ENV
+          echo 'EOF' >> $GITHUB_ENV
+        fi
+
         # Only include the GITHUB_SHA if it is used (supresses a warning)
-        grep --quiet "GITHUB_SHA" "./${{ inputs.dockerfile }}" && ARG_GITHUB_SHA='--build-arg "GITHUB_SHA=${{github.sha}}"'
-        if [ -n "${{ inputs.dockerfile }}" ] && [ "${{ inputs.dockerfile }}" != "Dockerfile" ]; then
-          CUSTOM_DOCKERFILE="-f ${{ inputs.dockerfile }}"
+        if grep --quiet GITHUB_SHA './${{ inputs.dockerfile }}'; then
+          echo ARG_GITHUB_SHA='--build-arg GITHUB_SHA=${{ github.sha }}' >> $GITHUB_ENV
         fi
 
-        if [ -n "${{ inputs.image_platform }}" ]; then
-          IMAGE_PLATFORM="--platform ${{ inputs.image_platform }} --load"
+        if [ -n '${{ inputs.dockerfile }}' ] && [ '${{ inputs.dockerfile }}' != 'Dockerfile' ]; then
+          echo CUSTOM_DOCKERFILE='-f ${{ inputs.dockerfile }}' >> $GITHUB_ENV
         fi
 
-        if [ -n "${{ inputs.build_config }}" ]; then
-          ARG_BUILD_CONFIG='--build-arg "BUILD_CONFIG=${{ inputs.build_config }}"'
+        if [ -n '${{ inputs.build_config }}' ]; then
+          echo ARG_BUILD_CONFIG='--build-arg BUILD_CONFIG="${{ inputs.build_config }}"' >> $GITHUB_ENV
         fi
 
-        eval docker build \
-          -t $CONTAINER_IMAGE_SHA \
-          -t $CONTAINER_IMAGE_LATEST \
-          $IMAGE_PLATFORM \
-          $CUSTOM_DOCKERFILE \
-          $ARG_BUILD_CONFIG \
-          $ARG_GITHUB_SSH_KEY \
-          $ARG_GITHUB_SHA \
-          .
-
-        if [ -n "${{ inputs.env_file }}" ]; then
-          ENV_FILE="--env-file ${{ inputs.env_file }}"
+        if [ -n '${{ inputs.env_file }}' ]; then
+          echo ENV_FILE='--env-file ${{ inputs.env_file }}' >> $GITHUB_ENV
         fi
 
-        if [ -n "${{inputs.healthcheck}}" ]; then
+        if [ '${{ steps.environment.outputs.buildx }}' = 'enabled' ]; then
+          if [ -n '${{ inputs.platform }}' ]; then
+            echo PLATFORM='--platform ${{ inputs.platform }} --load' >> $GITHUB_ENV
+          fi
+        fi
+
+        echo "::set-output name=aws-region::$(cut --fields 4 --delimiter '.' <<< '${{ inputs.ecr_uri }}')"
+        echo "::set-output name=base-container-image::$container_base"
+        echo "::set-output name=container-path::$(cut --fields 2- --delimiter '/' <<< "$container_base")"
+        echo '::set-output name=github-sha::${{ github.sha }}'
+
+    - name: Get ECR login password
+      shell: bash
+      id: get-login-password
+      env:
+        AWS_ACCESS_KEY_ID: ${{ inputs.access_key_id }}
+        AWS_SECRET_ACCESS_KEY: ${{ inputs.secret_access_key }}
+      run: |
+        login_password="$(aws ecr get-login-password --region '${{ steps.setup.outputs.aws-region }}')"
+        echo "::add-mask::$login_password"
+
+        if [ -z "$login_password" ]; then
+          echo '::error::Unable to obtain ECR password'
+          exit 4
+        fi
+
+        echo "::set-output name=password::$login_password"
+    - name: Docker login
+      shell: bash
+      run: >
+        docker login
+        --username AWS
+        --password '${{ steps.get-login-password.outputs.password }}'
+        ${{ inputs.ecr_uri }}
+
+    - name: Docker build
+      shell: bash
+      run: >
+        docker build
+        --tag $CONTAINER_IMAGE_SHA
+        --tag $CONTAINER_IMAGE_LATEST
+        $CUSTOM_DOCKERFILE
+        $ARG_BUILD_CONFIG
+        $ARG_GITHUB_SSH_KEY
+        $ARG_GITHUB_SHA
+        $PLATFORM
+        .
+
+    - name: Check health
+      shell: bash
+      run: |
+        if [ -n '${{ inputs.healthcheck }}' ]; then
           # Healthcheck the built container
-          docker run -d \
+          docker run --detach \
             --net host \
-            -p ${{inputs.port}}:${{inputs.port}} \
+            --publish ${{inputs.port}}:${{inputs.port}} \
             $ENV_FILE \
-            -e "HEALTHCHECK=${{inputs.healthcheck}}" \
-            -e "PORT=${{inputs.port}}" \
+            --env "HEALTHCHECK=${{inputs.healthcheck}}" \
+            --env "PORT=${{inputs.port}}" \
             --name test-container $CONTAINER_IMAGE_SHA
 
           ATTEMPT_COUNT=0
@@ -130,9 +227,12 @@ runs:
 
           echo "Healthcheck passed!"
           echo $(docker stop test-container) stopped.
+        else
+          echo '::warning::No healthcheck specified'
         fi
-
-        [ "${{inputs.deploy}}" = "true" ] \
-          && docker push $CONTAINER_IMAGE_SHA \
-          && docker push $CONTAINER_IMAGE_LATEST
+    - name: Push to ECR
       shell: bash
+      run: |
+        if [ '${{ inputs.deploy }}' = 'true' ]; then
+          docker push ${{ steps.setup.outputs.base-container-image }} --all-tags
+        fi
