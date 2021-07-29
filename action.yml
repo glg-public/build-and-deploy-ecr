@@ -164,7 +164,8 @@ runs:
 
         if [ '${{ steps.environment.outputs.buildx }}' = 'enabled' ]; then
           if [ -n '${{ inputs.platform }}' ]; then
-            echo PLATFORM='--platform ${{ inputs.platform }} --load' >> $GITHUB_ENV
+            echo PLATFORM='--platform ${{ inputs.platform }}' >> $GITHUB_ENV
+            echo BUILDX='--load' >> $GITHUB_ENV
           fi
         fi
 
@@ -174,6 +175,7 @@ runs:
 
         if [ -n '${{ inputs.cache-to }}' ]; then
           echo CACHE_TO='--cache-to ${{ inputs.cache-to }}' >> $GITHUB_ENV
+          echo BUILDX='--load' >> $GITHUB_ENV
         fi
 
         echo "::set-output name=aws-region::$(cut --fields 4 --delimiter '.' <<< '${{ inputs.ecr_uri }}')"
@@ -220,6 +222,7 @@ runs:
         $ARG_GITHUB_SSH_KEY
         $ARG_GITHUB_SHA
         $PLATFORM
+        $BUILDX
         .
 
     - name: Check health
