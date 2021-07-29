@@ -120,11 +120,7 @@ runs:
 
         # Only include the GITHUB_SSH_KEY if it exists
         if [ -n '${{ inputs.github_ssh_key }}' ]; then
-          # Special handling for multiline environment veriables
-          # https://docs.github.com/en/actions/reference/workflow-commands-for-github-actions#example-6
-          echo 'ARG_GITHUB_SSH_KEY<<EOF' >> $GITHUB_ENV
-          echo '--build-arg GITHUB_SSH_KEY="${{ inputs.github_ssh_key }}"' >> $GITHUB_ENV
-          echo 'EOF' >> $GITHUB_ENV
+          echo ARG_GITHUB_SSH_KEY='--build-arg "GITHUB_SSH_KEY=${{ inputs.github_ssh_key }}"' >> $GITHUB_ENV
         fi
 
         # Only include the GITHUB_SHA if it is used (supresses a warning)
