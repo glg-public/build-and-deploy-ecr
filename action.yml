@@ -12,6 +12,12 @@ inputs:
     description: File used during build (usually in postinstall) to install your app
     required: false
     default: ""
+  cache-from:
+    description: Cache source
+    required: false
+  cache-to:
+    description: Cache destination
+    required: false
   deploy:
     description: Whether to push the image to ECR after building it
     required: false
@@ -162,6 +168,14 @@ runs:
           fi
         fi
 
+        if [ -n '${{ inputs.cache-from }}' ]; then
+          echo CACHE_FROM='--cache-from ${{ inputs.cache-from }}' >> $GITHUB_ENV
+        fi
+
+        if [ -n '${{ inputs.cache-to }}' ]; then
+          echo CACHE_TO='--cache-to ${{ inputs.cache-to }}' >> $GITHUB_ENV
+        fi
+
         echo "::set-output name=aws-region::$(cut --fields 4 --delimiter '.' <<< '${{ inputs.ecr_uri }}')"
         echo "::set-output name=base-container-image::$container_base"
         echo "::set-output name=container-path::$(cut --fields 2- --delimiter '/' <<< "$container_base")"
@@ -199,6 +213,8 @@ runs:
         docker build
         --tag $CONTAINER_IMAGE_SHA
         --tag $CONTAINER_IMAGE_LATEST
+        $CACHE_FROM
+        $CACHE_TO
         $CUSTOM_DOCKERFILE
         $ARG_BUILD_CONFIG
         $ARG_GITHUB_SSH_KEY
