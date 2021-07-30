@@ -5,11 +5,17 @@ This github action builds a docker image from a dockerfile, healthchecks it, and
 
 This action requires certain things to be configured in your repo:
 
-1. You must have a **dockerfile** in the root directory of your repo.
-2. You must have the following **secrets** present in your repository. These should be added automatically by a different process.
-    1. `ECR_URI`
-    2. `ECR_AWS_ACCESS_KEY_ID`
-    3. `ECR_AWS_SECRET_ACCESS_KEY`
+1. You must have a **Dockerfile** in the root directory of your repo.
+
+2. You must have the required **secrets** present in your repository. These will be named similar to the following examples:
+    1. `{AWS_ACCOUNT_NAME}_ECR_URI`
+    2. `{AWS_ACCOUNT_NAME}_ECR_AWS_ACCESS_KEY_ID`
+    3. `{AWS_ACCOUNT_NAME}_ECR_AWS_SECRET_ACCESS_KEY`
+    
+    The secrets will be generated automatically, if you use the [glgroup cli](https://github.com/glg/cli) to register your repository.
+    
+    These secrets values should then be assigned to the corresponding configuration inputs.  (see [Example Usage](#example-usage))
+    
 3. This action was developed against the `ubuntu-20.04` github actions environment, and it may not work correctly in a different environment.
 
 ## Configuration
@@ -84,4 +90,27 @@ jobs:
         access_key_id: ${{secrets.ECR_AWS_ACCESS_KEY_ID}}
         secret_access_key: ${{secrets.ECR_AWS_SECRET_ACCESS_KEY}}
         github_ssh_key: ${{secrets.GITHUB_SSH_KEY}}
+```
+
+## Example building arm64 images
+```yml
+name: Build Image and Push to ECR
+on: [push]
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@master
+    - uses: docker/setup-qemu-action@27d0a4f181a40b142cce983c5393082c365d1480
+      with:
+        platforms: linux/arm64
+    - uses: docker/setup-buildx-action@0d135e0c2fc0dba0729c1a47ecfcf5a3c7f8579e
+      with:
+        install: true
+        version: latest
+    - uses: glg-public/build-and-deploy-ecr@main
+      with:
+        ecr_uri: ${{secrets.ECR_URI}}
+        access_key_id: ${{secrets.AWS_ACCESS_KEY_ID}}
+        secret_access_key: ${{secrets.ECR_AWS_SECRET_ACCESS_KEY}}
 ```
