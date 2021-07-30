@@ -36,7 +36,7 @@ inputs:
     required: false
     default: /healthcheck
   multipass:
-    description: Combined credentials for multiple accounts
+    description: Combined credentials for pushing to multiple accounts simultaneously
     required: false
     default: ""
   platform:
@@ -138,7 +138,7 @@ runs:
           fi
         fi
 
-        # Only include the GITHUB_SHA if it is used (supresses a warning)
+        # Only include the GITHUB_SHA if it is used (suppresses a warning)
         if grep --quiet GITHUB_SHA './${{ inputs.dockerfile }}'; then
           echo ARG_GITHUB_SHA='--build-arg GITHUB_SHA=${{ github.sha }}' >> $GITHUB_ENV
         fi
@@ -194,12 +194,15 @@ runs:
       shell: bash
       run: |
         if [ -n '${{ inputs.multipass }}' ]; then
-          IFS=','
+          # if it contains a comma, split on commas
+          if [[ '${{ inputs.multipass }}' == *","* ]]; then
+            IFS=','
+            read -ra urls <<< '${{ inputs.multipass }}'
+          else
+            readarray -t array <<< "$2"
+          fi
 
           aws_url='aws://([^:]+):([^@]+)@([0-9a-zA-Z.-]+)'
-
-          read -ra urls <<< '${{ inputs.multipass }}'
-
           tags=""
 
           for url in "${urls[@]}"; do
