@@ -207,7 +207,7 @@ runs:
               AWS_ACCESS_KEY_ID=${BASH_REMATCH[1]} \
               AWS_SECRET_ACCESS_KEY=${BASH_REMATCH[2]} \
               aws ecr get-login-password \
-                --region $(cut --fields 4 --delimiter '.' <<< "${BASH_REMATCH[3]}") | docker login \
+                --region "$(cut --fields 4 --delimiter '.' <<< "${BASH_REMATCH[3]}")" | docker login \
                 --username AWS \
                 --password-stdin ${BASH_REMATCH[3]}
 
