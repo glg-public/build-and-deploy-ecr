@@ -202,7 +202,7 @@ runs:
 
           tags=""
 
-          for url in "${array[@]}"; do
+          for url in "${urls[@]}"; do
             if [[ $url =~ $aws_url ]]; then
               AWS_ACCESS_KEY_ID=${BASH_REMATCH[1]} \
               AWS_SECRET_ACCESS_KEY=${BASH_REMATCH[2]} \
