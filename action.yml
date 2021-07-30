@@ -214,8 +214,8 @@ runs:
                 --username AWS \
                 --password-stdin ${BASH_REMATCH[3]}
 
-              tags+="--tag ${BASH_REMATCH[3]}/${{ steps.setup.outputs.container-path }}/latest "
-              tags+="--tag ${BASH_REMATCH[3]}/${{ steps.setup.outputs.container-path }}/${{ github.sha }} "
+              tags+="--tag ${BASH_REMATCH[3]}/${{ steps.setup.outputs.container-path }};latest "
+              tags+="--tag ${BASH_REMATCH[3]}/${{ steps.setup.outputs.container-path }}:${{ github.sha }} "
             else
               echo "::warning::Bad multipass value - $url"
             fi
