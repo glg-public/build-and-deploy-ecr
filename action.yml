@@ -35,6 +35,10 @@ inputs:
     description: healthcheck path, like /healthcheck
     required: false
     default: /healthcheck
+  multipass:
+    description: Combined credentials for multiple accounts
+    required: false
+    default: ""
   platform:
     default: ""
     description: Image platform
@@ -101,7 +105,6 @@ runs:
             exit 3
           fi
         fi
-
     - name: Setup environment variables
       id: setup
       shell: bash
@@ -187,6 +190,40 @@ runs:
         --password '${{ steps.get-login-password.outputs.password }}'
         ${{ inputs.ecr_uri }}
 
+    - name: Parse multipass
+      shell: bash
+      run: |
+        if [ -n '${{ inputs.multipass }}' ]; then
+          IFS=','
+
+          aws_uri=aws://([0-9A-Za-z_-=]+):([0-9A-Za-z_-=\/\+]+)@([0-9-a-zA-Z\.]+)
+
+          read -ra urls <<< '${{ inputs.multipass }}'
+
+          tags=""
+
+          for url in "${array[@]}"; do
+            if [[ $url =~ $aws_url ]]; then
+              AWS_ACCESS_KEY_ID=${BASH_REMATCH[1]} \
+              AWS_SECRET_ACCESS_KEY=${BASH_REMATCH[2]} \
+              aws ecr get-login-password \
+                --region $(cut --fields 4 --delimiter '.' <<< "${BASH_REMATCH[3]}") | docker login \
+                --username AWS \
+                --password-stdin ${BASH_REMATCH[3]}
+
+              tags+="--tag ${BASH_REMATCH[3]}/${{ steps.setup.outputs.container-path }}/latest "
+              tags+="--tag ${BASH_REMATCH[3]}/${{ steps.setup.outputs.container-path }}/${{ github.sha }} "
+            else
+              echo "::warning::Bad multipass value - $url"
+            fi
+          done
+
+          if [ -n "$tags" ]; then
+            echo '::debug::adding multipass tags'
+            echo ARG_MULTIPASS="$tags" >> $GITHUB_ENV
+          fi
+        fi
+
     - name: Docker build
       shell: bash
       env:
@@ -195,6 +232,7 @@ runs:
         docker build
         --tag $CONTAINER_IMAGE_SHA
         --tag $CONTAINER_IMAGE_LATEST
+        $ARG_MULTIPASS
         $CUSTOM_DOCKERFILE
         $ARG_BUILD_CONFIG
         $ARG_GITHUB_SSH_KEY
