@@ -187,12 +187,6 @@ runs:
         --password '${{ steps.get-login-password.outputs.password }}'
         ${{ inputs.ecr_uri }}
 
-    - name: debug
-      shell: bash
-      run: |
-        echo "::debug::\$SHELL=$SHELL"
-        echo "::debug::lines of GITHUB_SSH_KEY=$(echo "$GITHUB_SSH_KEY" | wc -l)"
-        echo "::debug::lines of ARG_GITHUB_SSH_KEY=$(echo "$ARG_GITHUB_SSH_KEY" | wc -l)"
     - name: Docker build
       shell: bash
       env:
