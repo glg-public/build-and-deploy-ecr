@@ -204,10 +204,13 @@ runs:
 
           for url in "${urls[@]}"; do
             if [[ $url =~ $aws_url ]]; then
+              region= "$(cut --fields 4 --delimiter '.' <<< "${BASH_REMATCH[3]}")"
+              echo "::debug::region? $region / #1 ${BASH_REMATCH[1]} / #2 ${BASH_REMATCH[2]} / #3 ${BASH_REMATCH[3]}"
+
               AWS_ACCESS_KEY_ID=${BASH_REMATCH[1]} \
               AWS_SECRET_ACCESS_KEY=${BASH_REMATCH[2]} \
               aws ecr get-login-password \
-                --region "$(cut --fields 4 --delimiter '.' <<< "${BASH_REMATCH[3]}")" | docker login \
+                --region $region | docker login \
                 --username AWS \
                 --password-stdin ${BASH_REMATCH[3]}
 
