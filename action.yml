@@ -196,7 +196,7 @@ runs:
         if [ -n '${{ inputs.multipass }}' ]; then
           IFS=','
 
-          aws_uri="aws://([0-9A-Za-z_-=]+):([0-9A-Za-z_-=\/\+]+)@([0-9-a-zA-Z\.]+)"
+          aws_uri="aws://([^:]+):([^@)@([0-9a-zA-Z\.]+)"
 
           read -ra urls <<< '${{ inputs.multipass }}'
 
