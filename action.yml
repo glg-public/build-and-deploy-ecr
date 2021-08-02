@@ -105,6 +105,7 @@ runs:
             exit 3
           fi
         fi
+
     - name: Setup environment variables
       id: setup
       shell: bash
@@ -201,11 +202,14 @@ runs:
             read -ra urls <<< '${{ inputs.multipass }}'
           else
             echo '::debug::parse using readarray'
+            echo "::debug::input lines - $(wc --lines <<< "${{ inputs.multipass }}")"
             readarray -t array <<< "${{ inputs.multipass }}"
           fi
 
           aws_url='aws://([^:]+):([^@]+)@([0-9a-zA-Z.-]+)'
           tags=""
+
+          echo "::debug::Found ${#urls[@]} multipass tags"
 
           for url in "${urls[@]}"; do
             if [[ $url =~ $aws_url ]]; then
@@ -228,7 +232,7 @@ runs:
 
           if [ -n "$tags" ]; then
             echo '::debug::adding multipass tags'
-            echo ARG_MULTIPASS="$tags" >> $GITHUB_ENV
+            echo ARG_MULTIPASS_TAGS="$tags" >> $GITHUB_ENV
           fi
         fi
 
@@ -240,7 +244,7 @@ runs:
         docker build
         --tag $CONTAINER_IMAGE_SHA
         --tag $CONTAINER_IMAGE_LATEST
-        $ARG_MULTIPASS
+        $ARG_MULTIPASS_TAGS
         $CUSTOM_DOCKERFILE
         $ARG_BUILD_CONFIG
         $ARG_GITHUB_SSH_KEY
