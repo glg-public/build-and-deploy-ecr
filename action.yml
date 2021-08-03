@@ -196,7 +196,7 @@ runs:
       run: |
         if [ -n '${{ inputs.multipass }}' ]; then
           # if it contains a comma, split on commas
-          if grep --quiet ',' '${{ inputs.multipass }}'; then
+          if [[ '${{ inputs.multipass }}' == *","* ]]; then
             echo '::debug::parse found a comma'
             IFS=','
             read -ra urls <<< '${{ inputs.multipass }}'
