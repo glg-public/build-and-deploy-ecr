@@ -196,14 +196,14 @@ runs:
       run: |
         if [ -n '${{ inputs.multipass }}' ]; then
           # if it contains a comma, split on commas
-          if [[ '${{ inputs.multipass }}' == *","* ]]; then
+          if grep --quiet ',' '${{ inputs.multipass }}'; then
             echo '::debug::parse found a comma'
             IFS=','
             read -ra urls <<< '${{ inputs.multipass }}'
           else
             echo '::debug::parse using readarray'
             echo "::debug::input lines - $(wc --lines <<< "${{ inputs.multipass }}")"
-            readarray -t array <<< "${{ inputs.multipass }}"
+            readarray -t urls <<< "${{ inputs.multipass }}"
           fi
 
           aws_url='aws://([^:]+):([^@]+)@([0-9a-zA-Z.-]+)'
