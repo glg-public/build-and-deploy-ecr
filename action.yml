@@ -35,10 +35,6 @@ inputs:
     description: healthcheck path, like /healthcheck
     required: false
     default: /healthcheck
-  multipass:
-    description: Combined credentials for pushing to multiple accounts simultaneously
-    required: false
-    default: ""
   platform:
     default: ""
     description: Image platform
@@ -47,6 +43,10 @@ inputs:
     description: Port the server listens on
     required: false
     default: "3000"
+  registries:
+    description: Credentials adn host for pushing to multiple registries at once
+    required: false
+    default: ""
   secret_access_key:
     description: AWS Secret Access Key
     required: true
@@ -191,24 +191,24 @@ runs:
         --password '${{ steps.get-login-password.outputs.password }}'
         ${{ inputs.ecr_uri }}
 
-    - name: Parse multipass
+    - name: Parse registries
       shell: bash
       run: |
-        if [ -n '${{ inputs.multipass }}' ]; then
+        if [ -n '${{ inputs.registries }}' ]; then
           # if it contains a comma, split on commas
-          if [[ '${{ inputs.multipass }}' == *","* ]]; then
+          if [[ '${{ inputs.registries }}' == *","* ]]; then
             echo '::debug::parse found a comma'
             IFS=','
-            read -ra urls <<< '${{ inputs.multipass }}'
+            read -ra urls <<< '${{ inputs.registries }}'
           else
             echo '::debug::parse using readarray'
-            readarray -t urls <<< "${{ inputs.multipass }}"
+            readarray -t urls <<< "${{ inputs.registries }}"
           fi
 
           aws_url='aws://([^:]+):([^@]+)@([0-9a-zA-Z.-]+)'
           tags=""
 
-          echo "::debug::Found ${#urls[@]} multipass tags"
+          echo "::debug::Found ${#urls[@]} registries entries"
 
           for url in "${urls[@]}"; do
             if [[ $url =~ $aws_url ]]; then
@@ -228,12 +228,12 @@ runs:
               # ignore blank lines
               continue
             else
-              echo "::warning::Bad multipass value - $url"
+              echo "::warning::Bad registries value - $url"
             fi
           done
 
           if [ -n "$tags" ]; then
-            echo '::debug::adding multipass tags'
+            echo '::debug::adding registries tags'
             echo ARG_MULTIPASS_TAGS="$tags" >> $GITHUB_ENV
           fi
         fi
