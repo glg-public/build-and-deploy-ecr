@@ -202,7 +202,6 @@ runs:
             read -ra urls <<< '${{ inputs.multipass }}'
           else
             echo '::debug::parse using readarray'
-            echo "::debug::input lines - $(wc --lines <<< "${{ inputs.multipass }}")"
             readarray -t urls <<< "${{ inputs.multipass }}"
           fi
 
@@ -225,6 +224,9 @@ runs:
 
               tags+="--tag ${BASH_REMATCH[3]}/${{ steps.setup.outputs.container-path }}:latest "
               tags+="--tag ${BASH_REMATCH[3]}/${{ steps.setup.outputs.container-path }}:${{ github.sha }} "
+            elif [ -z "$url" ]; then
+              # ignore blank lines
+              continue
             else
               echo "::warning::Bad multipass value - $url"
             fi
