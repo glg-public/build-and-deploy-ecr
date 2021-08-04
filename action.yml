@@ -44,7 +44,7 @@ inputs:
     required: false
     default: "3000"
   registries:
-    description: Credentials adn host for pushing to multiple registries at once
+    description: Credentials and host for pushing to multiple registries at once
     required: false
     default: ""
   secret_access_key:

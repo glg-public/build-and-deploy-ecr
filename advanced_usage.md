@@ -61,3 +61,6 @@ a single line of comma-separated values.
 with:
   registries: aws://foo:bar@baz,aws://qux:quux@catpants
 ```
+
+Note: The `registries` setting is used in conjunction with your default credentials for your main
+build. They are not a replacement for those settings.
