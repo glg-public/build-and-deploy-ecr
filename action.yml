@@ -43,6 +43,10 @@ inputs:
     description: Port the server listens on
     required: false
     default: "3000"
+  registries:
+    description: Credentials and host for pushing to multiple registries at once
+    required: false
+    default: ""
   secret_access_key:
     description: AWS Secret Access Key
     required: true
@@ -135,7 +139,7 @@ runs:
           fi
         fi
 
-        # Only include the GITHUB_SHA if it is used (supresses a warning)
+        # Only include the GITHUB_SHA if it is used (suppresses a warning)
         if grep --quiet GITHUB_SHA './${{ inputs.dockerfile }}'; then
           echo ARG_GITHUB_SHA='--build-arg GITHUB_SHA=${{ github.sha }}' >> $GITHUB_ENV
         fi
@@ -187,6 +191,52 @@ runs:
         --password '${{ steps.get-login-password.outputs.password }}'
         ${{ inputs.ecr_uri }}
 
+    - name: Parse registries
+      shell: bash
+      run: |
+        if [ -n '${{ inputs.registries }}' ]; then
+          # if it contains a comma, split on commas
+          if [[ '${{ inputs.registries }}' == *","* ]]; then
+            echo '::debug::parse found a comma'
+            IFS=','
+            read -ra urls <<< '${{ inputs.registries }}'
+          else
+            echo '::debug::parse using readarray'
+            readarray -t urls <<< "${{ inputs.registries }}"
+          fi
+
+          aws_url='aws://([^:]+):([^@]+)@([0-9a-zA-Z.-]+)'
+          tags=""
+
+          echo "::debug::Found ${#urls[@]} registries entries"
+
+          for url in "${urls[@]}"; do
+            if [[ $url =~ $aws_url ]]; then
+              region="$(cut --fields 4 --delimiter '.' <<< "${BASH_REMATCH[3]}")"
+
+              AWS_ACCESS_KEY_ID=${BASH_REMATCH[1]} \
+              AWS_SECRET_ACCESS_KEY=${BASH_REMATCH[2]} \
+              aws ecr get-login-password \
+                --region $region | docker login \
+                --username AWS \
+                --password-stdin ${BASH_REMATCH[3]}
+
+              tags+="--tag ${BASH_REMATCH[3]}/${{ steps.setup.outputs.container-path }}:latest "
+              tags+="--tag ${BASH_REMATCH[3]}/${{ steps.setup.outputs.container-path }}:${{ github.sha }} "
+            elif [ -z "$url" ]; then
+              # ignore blank lines
+              continue
+            else
+              echo "::warning::Bad registries value - $url"
+            fi
+          done
+
+          if [ -n "$tags" ]; then
+            echo '::debug::adding registries tags'
+            echo ARG_MULTIPASS_TAGS="$tags" >> $GITHUB_ENV
+          fi
+        fi
+
     - name: Docker build
       shell: bash
       env:
@@ -195,6 +245,7 @@ runs:
         docker build
         --tag $CONTAINER_IMAGE_SHA
         --tag $CONTAINER_IMAGE_LATEST
+        $ARG_MULTIPASS_TAGS
         $CUSTOM_DOCKERFILE
         $ARG_BUILD_CONFIG
         $ARG_GITHUB_SSH_KEY
