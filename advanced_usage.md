@@ -37,7 +37,7 @@ adding additional tags to the image for the appropriate repositories. The format
 <repo-type>://<username>:<password>@<registry-uri>
 ```
 
-The only `repo-type` currently support is `aws`. The `AWS_ACCESS_KEY_ID` functions as the username
+The only `repo-type` currently supported is `aws`. The `AWS_ACCESS_KEY_ID` functions as the username
 and the `AWS_SECRET_ACCESS_KEY` functions as the password. You can pass multiple registries at once.
 
 ### Example Usage
