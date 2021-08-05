@@ -50,7 +50,7 @@ and the `AWS_SECRET_ACCESS_KEY` functions as the password. You can pass multiple
     ecr_uri: ${{ secrets.registry-uri }}
     registries: |
       aws://${{ secrets.AWS_ACCESS_KEY_ID }}:${{ secrets.AWS_SECRET_ACCESS_KEY }}@${{ secrets.ECR_URI }}
-      aws://${{ secrets.ANOTHER_KEY_ID }}:${{ secrets.ANOTHER_ACCESS_KEY }}@${{ secrets.ANOTER_ECR_URI }}
+      aws://${{ secrets.ANOTHER_KEY_ID }}:${{ secrets.ANOTHER_ACCESS_KEY }}@${{ secrets.ANOTHER_ECR_URI }}
 ```
 
 Take note of the `|` after `registries:` in the YAML. Alternatively you can pass the registries in
