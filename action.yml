@@ -192,8 +192,11 @@ runs:
         ${{ inputs.ecr_uri }}
 
     - name: Parse registries
+      id: registries
       shell: bash
       run: |
+        hosts="${{ inputs.ecr_uri }} "
+
         if [ -n '${{ inputs.registries }}' ]; then
           # if it contains a comma, split on commas
           if [[ '${{ inputs.registries }}' == *","* ]]; then
@@ -221,6 +224,7 @@ runs:
                 --username AWS \
                 --password-stdin ${BASH_REMATCH[3]}
 
+              hosts+="${BASH_REMATCH[3]} "
               tags+="--tag ${BASH_REMATCH[3]}/${{ steps.setup.outputs.container-path }}:latest "
               tags+="--tag ${BASH_REMATCH[3]}/${{ steps.setup.outputs.container-path }}:${{ github.sha }} "
             elif [ -z "$url" ]; then
@@ -236,6 +240,8 @@ runs:
             echo ARG_MULTIPASS_TAGS="$tags" >> $GITHUB_ENV
           fi
         fi
+
+        echo "::set-output name=registry-hosts::$hosts"
 
     - name: Docker build
       shell: bash
@@ -297,3 +303,10 @@ runs:
         if [ '${{ inputs.deploy }}' = 'true' ]; then
           docker push ${{ steps.setup.outputs.base-container-image }} --all-tags
         fi
+
+    - name: Log out of all registries
+      shell: bash
+      run: |
+        for host in ${{ steps.registries.outputs.registry-hosts }} ; do
+          docker logout $host
+        done
