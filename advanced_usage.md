@@ -1,10 +1,26 @@
 # Advanced Configuration
 
-| Input | Description | Default |
-|-------|-------------|---------|
-| architecture | image architecture | '' |
-| platform | image platform | '' |
-| registries | additional registries to push this image to | '' |
+## Custom Configuration Types
+
+* CSV - comma-delimited string
+    ```yaml
+    csv: foo,bar,baz
+    ```
+* list - new line delimited list of values
+    ```yaml
+    list: |
+      first=one
+      two=deux
+    ```
+
+## Options
+
+| Input | Type | Description | Default |
+|---|---|---|---|
+| architecture | String | image architecture | '' |
+| build-args | List | build arguments pass to `docker build` command | '' |
+| platform | String | image platform | '' |
+| registries | CSV/List | additional registries to push this image to | '' |
 
 ## `architecture` and `platform` details
 
@@ -26,6 +42,24 @@ These are often used in together. Depending on your requirements, you may need t
   with:
     architecture: arm64
     platform: linux/arm64
+```
+
+## `build-args` details
+
+These are passed directly to the `docker build` command. They should be in the same format as you
+would use them on the command line. Here is an example of the command-line usage of `build-args`:
+
+```shell
+docker build --build-arg HELLO=world --build-arg cat=pants .
+```
+
+Those options translated to `yaml` would look like the following:
+
+```yaml
+with:
+  build-args: |
+    HELLO=world
+    cat=pants
 ```
 
 ## `registries` details
