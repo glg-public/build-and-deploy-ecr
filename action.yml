@@ -293,6 +293,9 @@ runs:
     - name: Docker build
       shell: bash
       env:
+        # equivalent to --progress=plain
+        BUILDKIT_PROGRESS: plain
+        # https://docs.docker.com/develop/develop-images/build_enhancements/#to-enable-buildkit-builds
         DOCKER_BUILDKIT: ${{ steps.setup.outputs.docker-buildkit }}
       run: >
         docker build
