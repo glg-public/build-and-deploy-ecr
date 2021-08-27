@@ -268,10 +268,28 @@ runs:
             continue
           fi
 
-          build_args+="--build-arg $a "
+          build_args+="--build-arg \"$a\" "
         done
 
         echo CUSTOM_BUILD_ARGS="$build-args" >> $GITHUB_ENV
+    - name: DEBUG Docker build
+      shell: bash
+      env:
+        DOCKER_BUILDKIT: ${{ steps.setup.outputs.docker-buildkit }}
+      run: >
+        echo
+        docker build
+        --tag $CONTAINER_IMAGE_SHA
+        --tag $CONTAINER_IMAGE_LATEST
+        $ARG_MULTIPASS_TAGS
+        $CUSTOM_DOCKERFILE
+        $CUSTOM_BUILD_ARGS
+        $ARG_BUILD_CONFIG
+        $ARG_GITHUB_SSH_KEY
+        $ARG_GITHUB_SHA
+        $PLATFORM
+        .
+
     - name: Docker build
       shell: bash
       env:
