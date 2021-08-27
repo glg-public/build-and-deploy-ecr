@@ -271,7 +271,7 @@ runs:
           build_args+="--build-arg \"$a\" "
         done
 
-        echo CUSTOM_BUILD_ARGS="$build-args" >> $GITHUB_ENV
+        echo CUSTOM_BUILD_ARGS="$build_args" >> $GITHUB_ENV
     - name: DEBUG Docker build
       shell: bash
       env:
