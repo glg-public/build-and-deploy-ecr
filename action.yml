@@ -166,6 +166,11 @@ runs:
           fi
         fi
 
+        # Look for future "RUN <<" syntax and enable buildkit
+        if grep --ignore-case --quiet '^\s*run\s\?<<' './${{ inputs.dockerfile }}'; then
+          echo '::set-output name=docker-buildkit::1'
+        fi
+
         echo "::set-output name=aws-region::$(cut --fields 4 --delimiter '.' <<< '${{ inputs.ecr_uri }}')"
         echo "::set-output name=base-container-image::$container_base"
         echo "::set-output name=container-path::$(cut --fields 2- --delimiter '/' <<< "$container_base")"
