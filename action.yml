@@ -8,6 +8,10 @@ inputs:
     description: Image architecture
     default: ""
     required: false
+  build-args:
+    description: List of build args to pass to Docker
+    default: ""
+    required: false
   build_config:
     description: File used during build (usually in postinstall) to install your app
     required: false
@@ -162,6 +166,11 @@ runs:
           fi
         fi
 
+        # Look for future "RUN <<" syntax and enable buildkit
+        if grep --ignore-case --quiet '^\s*run\s\?<<' './${{ inputs.dockerfile }}'; then
+          echo '::set-output name=docker-buildkit::1'
+        fi
+
         echo "::set-output name=aws-region::$(cut --fields 4 --delimiter '.' <<< '${{ inputs.ecr_uri }}')"
         echo "::set-output name=base-container-image::$container_base"
         echo "::set-output name=container-path::$(cut --fields 2- --delimiter '/' <<< "$container_base")"
@@ -243,9 +252,33 @@ runs:
 
         echo "::set-output name=registry-hosts::$hosts"
 
+    - name: Parse build-args
+      shell: bash
+      run: |
+        if [ -z '${{ inputs.build-args }}' ]; then
+          return
+        fi
+
+        build_args=""
+
+        readarray -t args <<< "${{ inputs.build-args }}"
+        for a in "${args[@]}"; do
+          # skip blank lines
+          if [ -z "$a" ]; then
+            continue
+          fi
+
+          build_args+="--build-arg $a "
+        done
+
+        echo CUSTOM_BUILD_ARGS="$build_args" >> $GITHUB_ENV
+
     - name: Docker build
       shell: bash
       env:
+        # equivalent to --progress=plain
+        BUILDKIT_PROGRESS: plain
+        # https://docs.docker.com/develop/develop-images/build_enhancements/#to-enable-buildkit-builds
         DOCKER_BUILDKIT: ${{ steps.setup.outputs.docker-buildkit }}
       run: >
         docker build
@@ -253,6 +286,7 @@ runs:
         --tag $CONTAINER_IMAGE_LATEST
         $ARG_MULTIPASS_TAGS
         $CUSTOM_DOCKERFILE
+        $CUSTOM_BUILD_ARGS
         $ARG_BUILD_CONFIG
         $ARG_GITHUB_SSH_KEY
         $ARG_GITHUB_SHA
