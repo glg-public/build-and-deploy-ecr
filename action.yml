@@ -255,23 +255,21 @@ runs:
     - name: Parse build-args
       shell: bash
       run: |
-        if [ -z '${{ inputs.build-args }}' ]; then
-          return
+        if [ -n '${{ inputs.build-args }}' ]; then
+          build_args=""
+
+          readarray -t args <<< "${{ inputs.build-args }}"
+          for a in "${args[@]}"; do
+            # skip blank lines
+            if [ -z "$a" ]; then
+              continue
+            fi
+
+            build_args+="--build-arg $a "
+          done
+
+          echo CUSTOM_BUILD_ARGS="$build_args" >> $GITHUB_ENV
         fi
-
-        build_args=""
-
-        readarray -t args <<< "${{ inputs.build-args }}"
-        for a in "${args[@]}"; do
-          # skip blank lines
-          if [ -z "$a" ]; then
-            continue
-          fi
-
-          build_args+="--build-arg $a "
-        done
-
-        echo CUSTOM_BUILD_ARGS="$build_args" >> $GITHUB_ENV
 
     - name: Docker build
       shell: bash
