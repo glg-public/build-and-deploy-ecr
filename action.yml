@@ -188,7 +188,7 @@ runs:
         echo "Checking for ECR Repository: $ECR_REPOSITORY"
         set +e
         log1=/tmp/describe-error.log
-        region=$(cut --fields 4 --delimiter '.' <<< "${{ inputs.ecr_uri }}")
+        region='${{ steps.setup.outputs.aws-region }}'
         ecr_repo=$(aws ecr describe-repositories --repository-names "$ECR_REPOSITORY" --region $region 2>$log1)
 
         if [ -f $log1 ]; then
