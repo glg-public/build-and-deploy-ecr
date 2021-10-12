@@ -188,9 +188,8 @@ runs:
         echo "Checking for ECR Repository: $ECR_REPOSITORY"
         set +e
         log1=/tmp/describe-error.log
-        AWS_REGION=$(cut --fields 4 --delimiter '.' <<< "${{ inputs.ecr_uri }}")
-        echo $AWS_REGION
-        ecr_repo=$(aws ecr describe-repositories --repository-names "$ECR_REPOSITORY" 2>$log1)
+        region=$(cut --fields 4 --delimiter '.' <<< "${{ inputs.ecr_uri }}")
+        ecr_repo=$(aws ecr describe-repositories --repository-names "$ECR_REPOSITORY" --region $region 2>$log1)
 
         if [ -f $log1 ]; then
           cat $log1
@@ -199,7 +198,7 @@ runs:
         if [ -z "$ecr_repo"]; then
           log2=/tmp/create-error.log
           echo "Creating ECR Repository: $ECR_REPOSITORY"
-          created=$(aws ecr create-repository --repository-name "$ECR_REPOSITORY" --tags "Key=ManagedBy,Value=GitHub" 2>$log2)
+          created=$(aws ecr create-repository --repository-name "$ECR_REPOSITORY" --tags "Key=ManagedBy,Value=GitHub" --region $region 2>$log2)
 
           if [ -f $log2 ]; then
             cat $log2
