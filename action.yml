@@ -117,7 +117,8 @@ runs:
         SSH_AUTH_SOCK: /tmp/ssh_agent.sock
       run: |
         branch=$(cut --fields 3 --delimiter '/' <<< '${{ github.ref }}')
-        container_base=$(tr '[:upper:]' '[:lower:]' <<< "${{ inputs.ecr_uri }}/github/${{ github.repository }}/$branch")
+        ecr_repository="github/${{ github.repository }}/$branch"
+        container_base=$(tr '[:upper:]' '[:lower:]' <<< "${{ inputs.ecr_uri }}/$ecr_repository")
 
         if [ -n '${{ inputs.architecture }}' ]; then
           prefix='${{ inputs.architecture }}-'
@@ -127,6 +128,7 @@ runs:
 
         echo CONTAINER_IMAGE_LATEST=$container_base:${prefix}latest >> $GITHUB_ENV
         echo CONTAINER_IMAGE_SHA=$container_base:${prefix}${{ github.sha }} >> $GITHUB_ENV
+        echo ECR_REPOSITORY=$ecr_repository >> $GITHUB_ENV
 
         # Only include the GITHUB_SSH_KEY if it exists
         if [ -n '${{ inputs.github_ssh_key }}' ]; then
@@ -175,6 +177,21 @@ runs:
         echo "::set-output name=base-container-image::$container_base"
         echo "::set-output name=container-path::$(cut --fields 2- --delimiter '/' <<< "$container_base")"
         echo '::set-output name=github-sha::${{ github.sha }}'
+
+    - name: Ensure ECR Repository Exists
+      shell: bash
+      id: assert-ecr-repo
+      run: |
+        # Check if the ECR repository exists, and create it if not
+        echo "Checking for ECR Repository: $ECR_REPOSITORY"
+        ecr_repo=$(aws ecr describe-repositories --repository-names "$ECR_REPOSITORY" 2>/dev/null)
+
+        if [ -z "$ecr_repo"]; then
+          echo "Creating ECR Repository: $ECR_REPOSITORY"
+          aws ecr create-repository \
+          --repository-name "$ECR_REPOSITORY" \
+          --tags "Key=ManagedBy,Value=GitHub"
+        fi
 
     - name: Get ECR login password
       shell: bash
