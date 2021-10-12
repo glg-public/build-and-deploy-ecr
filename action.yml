@@ -184,11 +184,12 @@ runs:
       env:
         AWS_ACCESS_KEY_ID: ${{ inputs.access_key_id }}
         AWS_SECRET_ACCESS_KEY: ${{ inputs.secret_access_key }}
-        AWS_REGION: us-east-1
       run: |
         echo "Checking for ECR Repository: $ECR_REPOSITORY"
         set +e
         log1=/tmp/describe-error.log
+        AWS_REGION=$(cut --fields 4 --delimiter '.' <<< "${{ inputs.ecr_uri }}")
+        echo $AWS_REGION
         ecr_repo=$(aws ecr describe-repositories --repository-names "$ECR_REPOSITORY" 2>$log1)
 
         if [ -f $log1 ]; then
