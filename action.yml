@@ -188,9 +188,14 @@ runs:
 
         if [ -z "$ecr_repo"]; then
           echo "Creating ECR Repository: $ECR_REPOSITORY"
-          aws ecr create-repository \
-          --repository-name "$ECR_REPOSITORY" \
-          --tags "Key=ManagedBy,Value=GitHub"
+          created=$(aws ecr create-repository --repository-name "$ECR_REPOSITORY" --tags "Key=ManagedBy,Value=GitHub" 2>/dev/null)
+          if [ -z "$created" ]; then
+            echo "Could not create ECR Repository: $ECR_REPOSITORY"
+            echo "Please re-register this repository to get updated credentials:"
+            echo
+            echo "    glgroup ecr register-github-repo -r ${{ github.repository }} -b main"
+            exit 1
+          fi
         fi
 
     - name: Get ECR login password
