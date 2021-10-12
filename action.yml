@@ -189,7 +189,7 @@ runs:
         echo "Checking for ECR Repository: $ECR_REPOSITORY"
         set +e
         log1=/tmp/describe-error.log
-        ecr_repo=$(aws ecr describe-repositories --repository-names "$ECR_REPOSITORY" --debug 2>$log1)
+        ecr_repo=$(aws ecr describe-repositories --repository-names "$ECR_REPOSITORY" 2>$log1)
 
         if [ -f $log1 ]; then
           cat $log1
@@ -198,7 +198,7 @@ runs:
         if [ -z "$ecr_repo"]; then
           log2=/tmp/create-error.log
           echo "Creating ECR Repository: $ECR_REPOSITORY"
-          created=$(aws ecr create-repository --repository-name "$ECR_REPOSITORY" --tags "Key=ManagedBy,Value=GitHub" --debug 2>$log2)
+          created=$(aws ecr create-repository --repository-name "$ECR_REPOSITORY" --tags "Key=ManagedBy,Value=GitHub" 2>$log2)
 
           if [ -f $log2 ]; then
             cat $log2
