@@ -181,6 +181,9 @@ runs:
     - name: Ensure ECR Repository Exists
       shell: bash
       id: assert-ecr-repo
+      env:
+        AWS_ACCESS_KEY_ID: ${{ inputs.access_key_id }}
+        AWS_SECRET_ACCESS_KEY: ${{ inputs.secret_access_key }}
       run: |
         # Check if the ECR repository exists, and create it if not
         echo "Checking for ECR Repository: $ECR_REPOSITORY"
