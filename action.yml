@@ -187,12 +187,22 @@ runs:
       run: |
         echo "Checking for ECR Repository: $ECR_REPOSITORY"
         set +e
-        ecr_repo=$(aws ecr describe-repositories --repository-names "$ECR_REPOSITORY" 2>/dev/null)
+        log1=/tmp/describe-error.log
+        ecr_repo=$(aws ecr describe-repositories --repository-names "$ECR_REPOSITORY" 2>$log1)
+
+        if [ -f $log1 ]; then
+          cat $log1
+        fi
 
         if [ -z "$ecr_repo"]; then
+          log2=/tmp/create-error.log
           echo "Creating ECR Repository: $ECR_REPOSITORY"
-          aws ecr create-repository --repository-name "$ECR_REPOSITORY" --tags "Key=ManagedBy,Value=GitHub"
-          created=$(aws ecr create-repository --repository-name "$ECR_REPOSITORY" --tags "Key=ManagedBy,Value=GitHub" 2>/dev/null)
+          created=$(aws ecr create-repository --repository-name "$ECR_REPOSITORY" --tags "Key=ManagedBy,Value=GitHub" 2>$log2)
+
+          if [ -f $log2 ]; then
+            cat $log2
+          fi
+
           if [ -z "$created" ]; then
             echo "Could not create ECR Repository: $ECR_REPOSITORY"
             echo "Please re-register this repository to get updated credentials:"
