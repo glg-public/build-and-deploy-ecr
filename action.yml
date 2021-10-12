@@ -196,7 +196,6 @@ runs:
           if [ -z "$created" ]; then
             echo "Could not create ECR Repository: $ECR_REPOSITORY"
             echo "Please re-register this repository to get updated credentials:"
-            echo
             echo "    glgroup ecr register-github-repo -r ${{ github.event.repository.name }} -b main"
             exit 1
           fi
