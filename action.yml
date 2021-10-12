@@ -187,7 +187,8 @@ runs:
       run: |
         # Check if the ECR repository exists, and create it if not
         echo "Checking for ECR Repository: $ECR_REPOSITORY"
-        ecr_repo=$(aws ecr describe-repositories --repository-names "$ECR_REPOSITORY")
+        set +e
+        ecr_repo=$(aws ecr describe-repositories --repository-names "$ECR_REPOSITORY" 2>/dev/null)
 
         if [ -z "$ecr_repo"]; then
           echo "Creating ECR Repository: $ECR_REPOSITORY"
@@ -200,6 +201,7 @@ runs:
             exit 1
           fi
         fi
+        set -e
 
     - name: Get ECR login password
       shell: bash
