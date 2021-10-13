@@ -211,7 +211,7 @@ runs:
             exit 1
           fi
 
-          policy=$(cat ./ecr-policy.json)
+          policy=$(cat ${{ github.action_path }}/ecr-policy.json)
           echo $policy
           log3=/tmp/policy-error.log
           policy_set=$(aws ecr set-repository-policy --repository-name "$ECR_REPOSITORY" --policy-text "$policy" 2>$log3)
