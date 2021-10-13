@@ -211,8 +211,8 @@ runs:
             exit 1
           fi
 
+          echo "Setting Policy for ECR Repo: $ECR_REPOSITORY"
           policy=$(cat ${{ github.action_path }}/ecr-policy.json)
-          echo $policy
           log3=/tmp/policy-error.log
           policy_set=$(aws ecr set-repository-policy --repository-name "$ECR_REPOSITORY" --policy-text "$policy" 2>$log3)
 
@@ -220,7 +220,7 @@ runs:
             cat $log3
           fi
 
-          if [] -z "$policy_set" ]; then
+          if [ -z "$policy_set" ]; then
             echo "Could not set ECR policy for $ECR_REPOSITORY"
             echo "Please re-register this repository to get updated credentials:"
             echo "    glgroup ecr register-github-repo -r ${{ github.event.repository.name }} -b ${{ github.event.repository.default_branch }}"
