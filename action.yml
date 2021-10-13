@@ -210,6 +210,9 @@ runs:
             echo "    glgroup ecr register-github-repo -r ${{ github.event.repository.name }} -b ${{ github.event.repository.default_branch }}"
             exit 1
           fi
+
+          policy=$(cat ./ecr-policy.json)
+          policy_set=$(aws ecr set-repository-policy --repository-name "$ECR_REPOSITORY" --policy-text "$policy")
         fi
         set -e
 
