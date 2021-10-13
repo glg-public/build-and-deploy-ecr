@@ -184,12 +184,12 @@ runs:
       env:
         AWS_ACCESS_KEY_ID: ${{ inputs.access_key_id }}
         AWS_SECRET_ACCESS_KEY: ${{ inputs.secret_access_key }}
+        AWS_DEFAULT_REGION: ${{ steps.setup.outputs.aws-region }}
       run: |
         echo "Checking for ECR Repository: $ECR_REPOSITORY"
         set +e
         log1=/tmp/describe-error.log
-        region='${{ steps.setup.outputs.aws-region }}'
-        ecr_repo=$(aws ecr describe-repositories --repository-names "$ECR_REPOSITORY" --region $region 2>$log1)
+        ecr_repo=$(aws ecr describe-repositories --repository-names "$ECR_REPOSITORY" 2>$log1)
 
         if [ -f $log1 ]; then
           cat $log1
@@ -198,7 +198,7 @@ runs:
         if [ -z "$ecr_repo"]; then
           log2=/tmp/create-error.log
           echo "Creating ECR Repository: $ECR_REPOSITORY"
-          created=$(aws ecr create-repository --repository-name "$ECR_REPOSITORY" --tags "Key=ManagedBy,Value=GitHub" --region $region 2>$log2)
+          created=$(aws ecr create-repository --repository-name "$ECR_REPOSITORY" --tags "Key=ManagedBy,Value=GitHub" 2>$log2)
 
           if [ -f $log2 ]; then
             cat $log2
@@ -207,7 +207,7 @@ runs:
           if [ -z "$created" ]; then
             echo "Could not create ECR Repository: $ECR_REPOSITORY"
             echo "Please re-register this repository to get updated credentials:"
-            echo "    glgroup ecr register-github-repo -r ${{ github.event.repository.name }} -b main"
+            echo "    glgroup ecr register-github-repo -r ${{ github.event.repository.name }} -b ${{ github.event.repository.default_branch }}"
             exit 1
           fi
         fi
