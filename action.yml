@@ -117,7 +117,8 @@ runs:
         SSH_AUTH_SOCK: /tmp/ssh_agent.sock
       run: |
         branch=$(cut --fields 3 --delimiter '/' <<< '${{ github.ref }}')
-        container_base=$(tr '[:upper:]' '[:lower:]' <<< "${{ inputs.ecr_uri }}/github/${{ github.repository }}/$branch")
+        ecr_repository="github/${{ github.repository }}/$branch"
+        container_base=$(tr '[:upper:]' '[:lower:]' <<< "${{ inputs.ecr_uri }}/$ecr_repository")
 
         if [ -n '${{ inputs.architecture }}' ]; then
           prefix='${{ inputs.architecture }}-'
@@ -127,6 +128,7 @@ runs:
 
         echo CONTAINER_IMAGE_LATEST=$container_base:${prefix}latest >> $GITHUB_ENV
         echo CONTAINER_IMAGE_SHA=$container_base:${prefix}${{ github.sha }} >> $GITHUB_ENV
+        echo ECR_REPOSITORY=$ecr_repository >> $GITHUB_ENV
 
         # Only include the GITHUB_SSH_KEY if it exists
         if [ -n '${{ inputs.github_ssh_key }}' ]; then
@@ -175,6 +177,57 @@ runs:
         echo "::set-output name=base-container-image::$container_base"
         echo "::set-output name=container-path::$(cut --fields 2- --delimiter '/' <<< "$container_base")"
         echo '::set-output name=github-sha::${{ github.sha }}'
+
+    - name: Ensure ECR Repository Exists
+      shell: bash
+      id: assert-ecr-repo
+      env:
+        AWS_ACCESS_KEY_ID: ${{ inputs.access_key_id }}
+        AWS_SECRET_ACCESS_KEY: ${{ inputs.secret_access_key }}
+        AWS_DEFAULT_REGION: ${{ steps.setup.outputs.aws-region }}
+      run: |
+        echo "Checking for ECR Repository: $ECR_REPOSITORY"
+        set +e
+        log1=/tmp/describe-error.log
+        ecr_repo=$(aws ecr describe-repositories --repository-names "$ECR_REPOSITORY" 2>$log1)
+
+        if [ -f $log1 ]; then
+          cat $log1
+        fi
+
+        if [ -z "$ecr_repo"]; then
+          log2=/tmp/create-error.log
+          echo "Creating ECR Repository: $ECR_REPOSITORY"
+          created=$(aws ecr create-repository --repository-name "$ECR_REPOSITORY" --tags "Key=ManagedBy,Value=GitHub" 2>$log2)
+
+          if [ -f $log2 ]; then
+            cat $log2
+          fi
+
+          if [ -z "$created" ]; then
+            echo "Could not create ECR Repository: $ECR_REPOSITORY"
+            echo "Please re-register this repository to get updated credentials:"
+            echo "    glgroup ecr register-github-repo -r ${{ github.event.repository.name }} -b ${{ github.event.repository.default_branch }}"
+            exit 1
+          fi
+
+          echo "Setting Policy for ECR Repo: $ECR_REPOSITORY"
+          policy=$(cat ${{ github.action_path }}/ecr-policy.json)
+          log3=/tmp/policy-error.log
+          policy_set=$(aws ecr set-repository-policy --repository-name "$ECR_REPOSITORY" --policy-text "$policy" 2>$log3)
+
+          if [ -f $log3 ]; then
+            cat $log3
+          fi
+
+          if [ -z "$policy_set" ]; then
+            echo "Could not set ECR policy for $ECR_REPOSITORY"
+            echo "Please re-register this repository to get updated credentials:"
+            echo "    glgroup ecr register-github-repo -r ${{ github.event.repository.name }} -b ${{ github.event.repository.default_branch }}"
+            exit 1
+          fi
+        fi
+        set -e
 
     - name: Get ECR login password
       shell: bash

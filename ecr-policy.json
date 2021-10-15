@@ -1,0 +1,29 @@
+{
+  "Version": "2008-10-17",
+  "Statement": [
+    {
+      "Sid": "CrossAccountPullAccess",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": ["arn:aws:iam::988857891049:root"]
+      },
+      "Action": [
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:BatchGetImage",
+        "ecr:GetDownloadUrlForLayer"
+      ]
+    },
+    {
+      "Sid": "CodeBuildPullAccess",
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "codebuild.amazonaws.com"
+      },
+      "Action": [
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:BatchGetImage",
+        "ecr:GetDownloadUrlForLayer"
+      ]
+    }
+  ]
+}
