@@ -117,7 +117,7 @@ runs:
         SSH_AUTH_SOCK: /tmp/ssh_agent.sock
       run: |
         branch=$(cut --fields 3 --delimiter '/' <<< '${{ github.ref }}')
-        ecr_repository="github/${{ github.repository }}/$branch"
+        ecr_repository=$(tr '[:upper:]' '[:lower:]' <<< "github/${{ github.repository }}/$branch")
         container_base=$(tr '[:upper:]' '[:lower:]' <<< "${{ inputs.ecr_uri }}/$ecr_repository")
 
         if [ -n '${{ inputs.architecture }}' ]; then
