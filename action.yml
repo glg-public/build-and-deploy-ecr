@@ -195,7 +195,7 @@ runs:
           cat $log1
         fi
 
-        if [ -z "$ecr_repo"]; then
+        if [ -z "$ecr_repo" ]; then
           log2=/tmp/create-error.log
           echo "Creating ECR Repository: $ECR_REPOSITORY"
           created=$(aws ecr create-repository --repository-name "$ECR_REPOSITORY" --tags "Key=ManagedBy,Value=GitHub" 2>$log2)
