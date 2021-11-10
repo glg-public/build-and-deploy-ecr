@@ -1,6 +1,8 @@
 const core = require("@actions/core");
+const github = require("@actions/github");
 const child_process = require("child_process");
 const { promisify } = require("util");
+const fs = require("fs").promises;
 const execFile = promisify(child_process.execFile);
 
 function getInputs() {
@@ -40,7 +42,11 @@ function getInputs() {
 
 async function main() {
   const inputs = getInputs();
+  let buildxEnabled = false;
 
+  /**
+   * Versions
+   */
   core.startGroup("docker version");
   const { stdout: dockerVersion } = await execFile("docker", ["version"]);
   console.log(dockerVersion);
@@ -54,6 +60,7 @@ async function main() {
     ]);
     console.log(buildxVersion);
     core.setOutput("buildx", "enabled");
+    buildxEnabled = true;
   } catch (e) {
     console.log(`builx unavailable - ${e.message}`);
   }
@@ -63,6 +70,28 @@ async function main() {
   const { stdout: dockerInfo } = await execFile("docker", ["info"]);
   console.log(dockerInfo);
   core.endGroup();
+
+  /**
+   * Ensure dockerfile exists and can be read
+   */
+  try {
+    await fs.readFile(inputs.dockerfile, "utf8");
+  } catch (e) {
+    core.error(e);
+    process.exit(2);
+  }
+
+  /**
+   * Check for buildx flags when buildx is not enabled
+   */
+  if (!buildxEnabled && inputs.platform) {
+    core.error(
+      "platform requested while buildx is not enabled. Please check your configuration and try again."
+    );
+    process.exit(3);
+  }
+
+  console.log(github.ref);
 }
 
 main();
