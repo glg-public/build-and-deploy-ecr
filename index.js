@@ -42,7 +42,8 @@ async function main() {
   const inputs = getInputs();
   core.startGroup("docker version");
   try {
-    await execFile("docker", ["version"]);
+    const stdout = await execFile("docker", ["version"]);
+    console.log(stdout);
   } catch (e) {
     console.log(e);
   }
