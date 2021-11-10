@@ -5,7 +5,9 @@ const execFile = promisify(child_process.execFile);
 
 function getInputs() {
   const accessKeyId = core.getInput("access_key_id", { required: true });
-  const secretAccessKey = core.getInput("secretAccessKey", { required: true });
+  const secretAccessKey = core.getInput("secret_access_key", {
+    required: true,
+  });
   const ecrURI = core.getInput("ecr_uri", { required: true });
   const architecture = core.getInput("architecture");
   const buildArgs = core.getInput("build-args");
