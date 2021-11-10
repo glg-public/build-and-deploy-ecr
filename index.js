@@ -91,7 +91,7 @@ async function main() {
     process.exit(3);
   }
 
-  console.log(github.ref);
+  console.log(JSON.stringify(github.context));
 }
 
 main();
