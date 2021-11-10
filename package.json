@@ -1,0 +1,29 @@
+{
+  "name": "build-and-deploy-ecr",
+  "version": "1.0.0",
+  "description": "A github action for building docker images and pushing them to ECR. For use with GDS.",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha --recursive"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/glg-public/build-and-deploy-ecr.git"
+  },
+  "keywords": [
+    "gds",
+    "cicd",
+    "docker",
+    "ecr"
+  ],
+  "author": "Shawn Rushefsky",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/glg-public/build-and-deploy-ecr/issues"
+  },
+  "homepage": "https://github.com/glg-public/build-and-deploy-ecr#readme",
+  "dependencies": {
+    "@actions/core": "^1.6.0",
+    "@actions/github": "^5.0.0"
+  }
+}
