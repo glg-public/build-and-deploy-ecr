@@ -40,13 +40,28 @@ function getInputs() {
 
 async function main() {
   const inputs = getInputs();
+
   core.startGroup("docker version");
+  const { stdout: dockerVersion } = await execFile("docker", ["version"]);
+  console.log(dockerVersion);
+  core.endGroup();
+
+  core.startGroup("docker buildx version");
   try {
-    const { stdout } = await execFile("docker", ["version"]);
-    console.log(stdout);
+    const { stdout: buildxVersion } = await execFile("docker", [
+      "buildx",
+      "version",
+    ]);
+    console.log(buildxVersion);
+    core.setOutput("buildx", "enabled");
   } catch (e) {
-    console.log(e);
+    console.log(`builx unavailable - ${e.message}`);
   }
+  core.endGroup();
+
+  core.startGroup("docker info");
+  const { stdout: dockerInfo } = await execFile("docker", ["info"]);
+  console.log(dockerInfo);
   core.endGroup();
 }
 
