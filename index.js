@@ -1,4 +1,7 @@
 const core = require("@actions/core");
+const child_process = require("child_process");
+const { promisify } = require("util");
+const execFile = promisify(child_process.execFile);
 
 function getInputs() {
   const accessKeyId = core.getInput("access_key_id", { required: true });
@@ -32,3 +35,16 @@ function getInputs() {
     registries,
   };
 }
+
+async function main() {
+  const inputs = getInputs();
+  core.startGroup("docker version");
+  try {
+    await execFile("docker", ["version"]);
+  } catch (e) {
+    console.log(e);
+  }
+  core.endGroup();
+}
+
+main();
