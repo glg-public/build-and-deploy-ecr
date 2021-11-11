@@ -3,11 +3,16 @@ const github = require("@actions/github");
 const {
   ECRClient,
   DescribeRepositoriesCommand,
+  CreateRepositoryCommand,
+  SetRepositoryPolicyCommand,
 } = require("@aws-sdk/client-ecr");
 
 const child_process = require("child_process");
 const { promisify } = require("util");
 const fs = require("fs").promises;
+
+const ecrPolicy = require("./ecr-policy.json");
+
 const execFile = promisify(child_process.execFile);
 
 function getInputs() {
@@ -101,7 +106,11 @@ async function main() {
     ref,
     sha,
     payload: {
-      repository: { full_name: ghRepo },
+      repository: {
+        full_name: ghRepo,
+        name: repoName,
+        default_branch: defaultBranch,
+      },
     },
   } = github.context;
 
@@ -171,17 +180,66 @@ async function main() {
     },
   });
 
+  try {
+    await assertECRRepo(ecrClient, ecrRepository);
+  } catch (e) {
+    core.error(e.message + reRegisterHelperTxt(repoName, defaultBranch));
+    process.exit(1);
+  }
+}
+
+async function assertECRRepo(client, repository) {
   const describeCmd = new DescribeRepositoriesCommand({
-    repositoryNames: [ecrRepository],
+    repositoryNames: [repository],
   });
 
   try {
-    const result = await ecrClient.send(describeCmd);
+    const result = await client.send(describeCmd);
     console.log(JSON.stringify(result, null, 2));
   } catch (e) {
-    console.log(e);
-    console.log(JSON.stringify(e, null, 2));
+    // If it doesn't exist, create it
+    if (e.name === "RepositoryNotFoundException") {
+      const createCmd = new CreateRepositoryCommand({
+        repositoryName: repository,
+        tags: [
+          {
+            Key: "ManagedBy",
+            Value: "GitHub",
+          },
+        ],
+      });
+
+      try {
+        const result = await client.send(createCmd);
+        console.log(JSON.stringify(result, null, 2));
+        try {
+          const setPolicyCmd = new SetRepositoryPolicyCommand({
+            repositoryName: repository,
+            policyText: JSON.stringify(ecrPolicy),
+          });
+          await client.send(setPolicyCmd);
+        } catch (eee) {
+          const err = new Error(`Could not set ECR policy for ${repository}`);
+          err.name = "CouldNotSetPolicy";
+          err.repository = repository;
+          throw err;
+        }
+      } catch (ee) {
+        const err = new Error(`Could not create ECR Repository: ${repository}`);
+        err.name = "CouldNotCreateRepo";
+        err.repository = repository;
+        throw err;
+      }
+    } else throw e;
   }
+}
+
+function reRegisterHelperTxt(ghRepo, ghBranch) {
+  return `
+  Please re-register this github repository to get updated credentials:
+  
+  glgroup ecr register-github-repo -r ${ghRepo} -b ${ghBranch}
+  `;
 }
 
 main();
