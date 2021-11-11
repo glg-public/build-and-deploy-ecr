@@ -496,8 +496,8 @@ async function loginToAllRegistries(ecrClient, inputs) {
           }
         })
     );
-    return { dockerBuildArgs, hosts };
   }
+  return { dockerBuildArgs, hosts };
 }
 
 main();
