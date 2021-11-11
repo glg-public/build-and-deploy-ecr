@@ -195,7 +195,11 @@ async function main() {
   try {
     const resp = await ecrClient.send(getAuthCmd);
     const ecrAuthToken = resp.authorizationData[0].authorizationToken;
-    console.log(Buffer.from(ecrAuthToken, "base64").toString("utf8"));
+    const [user, pass] = Buffer.from(ecrAuthToken, "base64")
+      .toString("utf8")
+      .split(":");
+    ecrUser = user;
+    ecrPass = pass;
   } catch (e) {
     core.error(e);
     core.error("Unable to obtain ECR password");
@@ -203,17 +207,17 @@ async function main() {
   }
 
   // Mask the token in logs
-  // core.setSecret(ecrAuthToken);
+  core.setSecret(ecrPass);
 
-  // const { stdout } = await execFile("docker", [
-  //   "login",
-  //   "--username",
-  //   "AWS",
-  //   "--password",
-  //   ecrAuthToken,
-  //   inputs.ecrURI,
-  // ]);
-  // console.log(stdout);
+  const { stdout } = await execFile("docker", [
+    "login",
+    "--username",
+    ecrUser,
+    "--password",
+    ecrPass,
+    inputs.ecrURI,
+  ]);
+  console.log(stdout);
 }
 
 async function assertECRRepo(client, repository) {
