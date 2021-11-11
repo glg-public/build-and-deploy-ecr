@@ -187,7 +187,7 @@ async function main() {
     process.exit(1);
   }
 
-  const getAuthCmd = new GetAuthorizationTokenCommand();
+  const getAuthCmd = new GetAuthorizationTokenCommand({});
   try {
     const resp = await ecrClient.send(getAuthCmd);
     console.log(JSON.stringify(resp, null, 2));
