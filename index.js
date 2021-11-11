@@ -199,8 +199,10 @@ async function main() {
   /**
    * Log in to Docker
    */
-  const moreArgs = await loginToAllRegistries(ecrClient, inputs);
+  const { dockerBuildArgs: moreArgs, hosts: moreHosts } =
+    await loginToAllRegistries(ecrClient, inputs);
   dockerBuildArgs.push(...moreArgs);
+  hosts.push(...moreHosts);
 
   /**
    * Parse any additional build args
@@ -454,6 +456,7 @@ function reRegisterHelperTxt(ghRepo, ghBranch) {
 
 async function loginToAllRegistries(ecrClient, inputs) {
   const dockerBuildArgs = [];
+  const hosts = [];
   await dockerLogin(ecrClient, inputs.ecrURI);
   if (inputs.registries) {
     // Split on comma if there's a comma, otherwise on newline
@@ -493,7 +496,7 @@ async function loginToAllRegistries(ecrClient, inputs) {
           }
         })
     );
-    return dockerBuildArgs;
+    return { dockerBuildArgs, hosts };
   }
 }
 
