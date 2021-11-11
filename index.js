@@ -122,7 +122,12 @@ async function main() {
   const containerImageLatest = `${containerBase}:${prefix}latest`;
   const containerImageSha = `${containerBase}:${prefix}${sha}`;
 
-  const dockerBuildArgs = [];
+  const dockerBuildArgs = [
+    "--tag",
+    containerImageLatest,
+    "--tag",
+    containerImageSha,
+  ];
   const sshAuthSock = "/tmp/ssh_agent.sock";
 
   // Only include the GITHUB_SSH_KEY if it exists
