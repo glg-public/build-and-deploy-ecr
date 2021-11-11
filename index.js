@@ -5,6 +5,7 @@ const {
   DescribeRepositoriesCommand,
   CreateRepositoryCommand,
   SetRepositoryPolicyCommand,
+  GetAuthorizationTokenCommand,
 } = require("@aws-sdk/client-ecr");
 
 const child_process = require("child_process");
@@ -186,6 +187,15 @@ async function main() {
     core.error(e.message + reRegisterHelperTxt(repoName, defaultBranch));
     process.exit(1);
   }
+
+  const getAuthCmd = new GetAuthorizationTokenCommand();
+  try {
+    const resp = await ecrClient.send(getAuthCmd);
+    console.log(JSON.stringify(resp, null, 2));
+  } catch (e) {
+    core.error("Unable to obtain ECR password");
+    process.exit(4);
+  }
 }
 
 async function assertECRRepo(client, repository) {
@@ -211,7 +221,6 @@ async function assertECRRepo(client, repository) {
 
       try {
         const result = await client.send(createCmd);
-        console.log(JSON.stringify(result, null, 2));
         try {
           const setPolicyCmd = new SetRepositoryPolicyCommand({
             repositoryName: repository,
