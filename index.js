@@ -168,6 +168,18 @@ async function main() {
     accessKeyId: inputs.accessKeyId,
     secretAccessKey: inputs.secretAccessKey,
   });
+
+  const describeCmd = new DescribeRepositoriesCommand({
+    repositoryNames: [ecrRepository],
+  });
+
+  try {
+    const result = await ecrClient.send(describeCmd);
+    console.log(JSON.stringify(result, null, 2));
+  } catch (e) {
+    console.log(e);
+    console.log(JSON.stringify(e, null, 2));
+  }
 }
 
 main();
