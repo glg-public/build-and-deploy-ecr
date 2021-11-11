@@ -1,5 +1,10 @@
 const core = require("@actions/core");
 const github = require("@actions/github");
+const {
+  ECRClient,
+  DescribeRepositoriesCommand,
+} = require("@aws-sdk/client-ecr");
+
 const child_process = require("child_process");
 const { promisify } = require("util");
 const fs = require("fs").promises;
@@ -13,11 +18,11 @@ function getInputs() {
   const ecrURI = core.getInput("ecr_uri", { required: true });
   const architecture = core.getInput("architecture");
   const buildArgs = core.getInput("build-args");
-  const build_config = core.getInput("build_config");
+  const buildConfig = core.getInput("build_config");
   const deploy = core.getBooleanInput("deploy");
   const dockerfile = core.getInput("dockerfile");
-  const env_file = core.getInput("env_file");
-  const github_ssh_key = core.getInput("github_ssh_key");
+  const envFile = core.getInput("env_file");
+  const githubSSHKey = core.getInput("github_ssh_key");
   const healthcheck = core.getInput("healthcheck");
   const platform = core.getInput("platform");
   const port = core.getInput("port");
@@ -28,11 +33,11 @@ function getInputs() {
     ecrURI,
     architecture,
     buildArgs,
-    build_config,
+    buildConfig,
     deploy,
     dockerfile,
-    env_file,
-    github_ssh_key,
+    envFile,
+    githubSSHKey,
     healthcheck,
     platform,
     port,
@@ -74,8 +79,9 @@ async function main() {
   /**
    * Ensure dockerfile exists and can be read
    */
+  let dockerfile;
   try {
-    await fs.readFile(inputs.dockerfile, "utf8");
+    dockerfile = await fs.readFile(inputs.dockerfile, "utf8");
   } catch (e) {
     core.error(e);
     process.exit(2);
@@ -91,7 +97,77 @@ async function main() {
     process.exit(3);
   }
 
-  console.log(JSON.stringify(github.context, null, 2));
+  const {
+    ref,
+    sha,
+    payload: {
+      repository: { full_name: ghRepo },
+    },
+  } = github.context;
+
+  const branch = ref.split("refs/heads/")[1];
+  const ecrRepository = `github/${ghRepo}/${branch}`.toLowerCase();
+  const containerBase = `${inputs.ecrURI}/${ecrRepository}`.toLowerCase();
+  const prefix = inputs.architecture ? `${inputs.architecture}-` : "";
+  const containerImageLatest = `${containerBase}:${prefix}latest`;
+  const containerImageSha = `${containerBase}:${prefix}${sha}`;
+
+  const dockerBuildArgs = [];
+  const sshAuthSock = "/tmp/ssh_agent.sock";
+
+  // Only include the GITHUB_SSH_KEY if it exists
+  if (inputs.githubSSHKey) {
+    /**
+     * If the dockerfile requests buildkit functionality,
+     * appease it, otherwise default to build args
+     */
+    if (/mount=type=ssh/.test(dockerfile)) {
+      await execFile("ssh-agent", ["-a", sshAuthSock]);
+      const key = Buffer.from(inputs.githubSSHKey, "base64").toString("utf8");
+      const keyFileName = "key";
+      await fs.writeFile(keyFileName, key);
+      await execFile("ssh-add", [keyFileName]);
+    } else {
+      dockerBuildArgs.push(
+        "--build-arg",
+        `GITHUB_SSH_KEY=${inputs.githubSSHKey}`
+      );
+    }
+  }
+
+  // Only include the GITHUB_SHA if it is used
+  if (/GITHUB_SHA/.test(dockerfile)) {
+    dockerBuildArgs.push("--build-arg", `GITHUB_SHA=${sha}`);
+  }
+
+  if (inputs.dockerfile && inputs.dockerfile !== "Dockerfile") {
+    dockerBuildArgs.push("-f", inputs.dockerfile);
+  }
+
+  if (inputs.buildConfig) {
+    dockerBuildArgs.push("--build-arg", `BUILD_CONFIG=${inputs.buildConfig}`);
+  }
+
+  if (buildxEnabled && inputs.platform) {
+    dockerBuildArgs.push("--platform", inputs.platform, "--load");
+  }
+
+  const buildEnv = {};
+  if (/^\s*run\s?<</i.test(dockerfile)) {
+    buildEnv["DOCKER_BUILDKIT"] = 1;
+  }
+
+  // aws_account_id.dkr.ecr.region.amazonaws.com
+  const region = inputs.ecrURI.split(".")[3];
+
+  /**
+   * Ensure ECR Repository Exists
+   */
+  const ecrClient = new ECRClient({
+    region,
+    accessKeyId: inputs.accessKeyId,
+    secretAccessKey: inputs.secretAccessKey,
+  });
 }
 
 main();
