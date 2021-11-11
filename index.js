@@ -187,15 +187,32 @@ async function main() {
     process.exit(1);
   }
 
+  /**
+   * Log in to Docker
+   */
   const getAuthCmd = new GetAuthorizationTokenCommand({});
+  let ecrAuthToken;
   try {
     const resp = await ecrClient.send(getAuthCmd);
-    console.log(JSON.stringify(resp, null, 2));
+    ecrAuthToken = resp.authorizationData[0].authorizationToken;
   } catch (e) {
     core.error(e);
     core.error("Unable to obtain ECR password");
     process.exit(4);
   }
+
+  // Mask the token in logs
+  core.setSecret(ecrAuthToken);
+
+  const { stdout } = await execFile("docker", [
+    "login",
+    "--username",
+    "AWS",
+    "--password",
+    ecrAuthToken,
+    inputs.ecrURI,
+  ]);
+  console.log(stdout);
 }
 
 async function assertECRRepo(client, repository) {
