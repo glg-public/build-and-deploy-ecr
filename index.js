@@ -165,6 +165,7 @@ async function main() {
   const buildEnv = {};
   if (/^\s*run\s?<</i.test(dockerfile)) {
     buildEnv["DOCKER_BUILDKIT"] = 1;
+    buildEnv["BUILDKIT_PROGRESS"] = "plain";
   }
 
   // aws_account_id.dkr.ecr.region.amazonaws.com
@@ -187,37 +188,89 @@ async function main() {
     process.exit(1);
   }
 
+  const hosts = [inputs.ecrURI];
+
   /**
    * Log in to Docker
    */
-  const getAuthCmd = new GetAuthorizationTokenCommand({});
-  let ecrUser, ecrPass;
-  try {
-    const resp = await ecrClient.send(getAuthCmd);
-    const ecrAuthToken = resp.authorizationData[0].authorizationToken;
-    const [user, pass] = Buffer.from(ecrAuthToken, "base64")
-      .toString("utf8")
-      .split(":");
-    ecrUser = user;
-    ecrPass = pass;
-  } catch (e) {
-    core.error(e);
-    core.error("Unable to obtain ECR password");
-    process.exit(4);
+  await dockerLogin(ecrClient, inputs.ecrURI);
+  if (inputs.registries) {
+    // Split on comma if there's a comma, otherwise on newline
+    const urls = /,/.test(inputs.registries)
+      ? inputs.registries.split(",")
+      : inputs.registries.split("\n");
+    const awsUrl = /aws:\/\/([^:]+):([^@]+)@([0-9a-zA-Z.-]+)/;
+    await Promise.all(
+      urls
+        .filter((url) => !!url)
+        .map(async (url) => {
+          const match = awsUrl.exec(url);
+          if (match) {
+            const [, accessKeyId, secretAccessKey, ecrURI] = match;
+            const otherRegion = ecrURI.split(".")[3];
+            const otherEcrClient = new ECRClient({
+              region: otherRegion,
+              credentials: {
+                accessKeyId: accessKeyId,
+                secretAccessKey: secretAccessKey,
+              },
+            });
+
+            await assertECRRepo(otherEcrClient, ecrRepository);
+
+            await dockerLogin(otherEcrClient, ecrURI);
+
+            hosts.push(ecrURI);
+            dockerBuildArgs.push(
+              "--tag",
+              `${ecrURI}/${ecrRepository}:latest`,
+              "--tag",
+              `${ecrURI}/${ecrRepository}:${sha}`
+            );
+          } else {
+            core.warning(`Bad registries value - ${url}`);
+          }
+        })
+    );
   }
 
-  // Mask the token in logs
-  core.setSecret(ecrPass);
+  /**
+   * Parse any additional build args
+   */
+  if (inputs.buildArgs) {
+    inputs.buildArgs
+      .split("\n")
+      .filter((line) => !!line)
+      .forEach((arg) => {
+        dockerBuildArgs.push("--build-arg", arg);
+      });
+  }
 
-  const { stdout } = await execFile("docker", [
-    "login",
-    "--username",
-    ecrUser,
-    "--password",
-    ecrPass,
-    inputs.ecrURI,
-  ]);
-  console.log(stdout);
+  /**
+   * Build the image
+   */
+  core.startGroup("Docker Build");
+  await dockerBuild(dockerBuildArgs, buildEnv);
+  core.endGroup();
+}
+
+function dockerBuild(args, env = {}) {
+  return new Promise((resolve, reject) => {
+    const cmd = child_process.spawn("docker", ["build", ...args, "."], { env });
+    cmd.stdout.on("data", (data) => {
+      console.log(data.toString());
+    });
+    cmd.stderr.on("data", (data) => {
+      console.error(data.toString());
+    });
+    cmd.on("exit", (code) => {
+      if (code === 0) {
+        return resolve();
+      } else {
+        return reject(code);
+      }
+    });
+  });
 }
 
 async function assertECRRepo(client, repository) {
@@ -262,6 +315,39 @@ async function assertECRRepo(client, repository) {
       }
     } else throw e;
   }
+}
+
+async function dockerLogin(ecrClient, ecrURI) {
+  /**
+   * Log in to Docker
+   */
+  const getAuthCmd = new GetAuthorizationTokenCommand({});
+  let ecrUser, ecrPass;
+  try {
+    const resp = await ecrClient.send(getAuthCmd);
+    const ecrAuthToken = resp.authorizationData[0].authorizationToken;
+    const [user, pass] = Buffer.from(ecrAuthToken, "base64")
+      .toString("utf8")
+      .split(":");
+    ecrUser = user;
+    ecrPass = pass;
+  } catch (e) {
+    core.error(e);
+    core.error("Unable to obtain ECR password");
+    process.exit(4);
+  }
+
+  // Mask the token in logs
+  core.setSecret(ecrPass);
+
+  await execFile("docker", [
+    "login",
+    "--username",
+    ecrUser,
+    "--password",
+    ecrPass,
+    ecrURI,
+  ]);
 }
 
 function reRegisterHelperTxt(ghRepo, ghBranch) {
