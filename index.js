@@ -11,6 +11,7 @@ const {
 const child_process = require("child_process");
 const { promisify } = require("util");
 const fs = require("fs").promises;
+const http = require("http");
 
 const ecrPolicy = require("./ecr-policy.json");
 
@@ -198,46 +199,8 @@ async function main() {
   /**
    * Log in to Docker
    */
-  await dockerLogin(ecrClient, inputs.ecrURI);
-  if (inputs.registries) {
-    // Split on comma if there's a comma, otherwise on newline
-    const urls = /,/.test(inputs.registries)
-      ? inputs.registries.split(",")
-      : inputs.registries.split("\n");
-    const awsUrl = /aws:\/\/([^:]+):([^@]+)@([0-9a-zA-Z.-]+)/;
-    await Promise.all(
-      urls
-        .filter((url) => !!url)
-        .map(async (url) => {
-          const match = awsUrl.exec(url);
-          if (match) {
-            const [, accessKeyId, secretAccessKey, ecrURI] = match;
-            const otherRegion = ecrURI.split(".")[3];
-            const otherEcrClient = new ECRClient({
-              region: otherRegion,
-              credentials: {
-                accessKeyId: accessKeyId,
-                secretAccessKey: secretAccessKey,
-              },
-            });
-
-            await assertECRRepo(otherEcrClient, ecrRepository);
-
-            await dockerLogin(otherEcrClient, ecrURI);
-
-            hosts.push(ecrURI);
-            dockerBuildArgs.push(
-              "--tag",
-              `${ecrURI}/${ecrRepository}:latest`,
-              "--tag",
-              `${ecrURI}/${ecrRepository}:${sha}`
-            );
-          } else {
-            core.warning(`Bad registries value - ${url}`);
-          }
-        })
-    );
-  }
+  const moreArgs = await loginToAllRegistries(ecrClient, inputs);
+  dockerBuildArgs.push(...moreArgs);
 
   /**
    * Parse any additional build args
@@ -257,11 +220,133 @@ async function main() {
   core.startGroup("Docker Build");
   await dockerBuild(dockerBuildArgs, buildEnv);
   core.endGroup();
+
+  /**
+   * Healthcheck
+   */
+  if (inputs.healthcheck) {
+    await runHealthcheck(containerImageSha, inputs);
+  } else {
+    core.warning("No healthcheck specified");
+  }
+
+  /**
+   * Push up all tags
+   */
+  if (inputs.deploy) {
+    await execWithLiveOutput("docker", ["push", containerBase, "--all-tags"]);
+  }
+
+  /**
+   * Log out of all registries
+   */
+  await Promise.all(hosts.map((host) => execFile("docker", ["logout", host])));
 }
 
-function dockerBuild(args, env = {}) {
+function sleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+async function runHealthcheck(imageName, inputs) {
+  const args = [
+    "run",
+    "--detach",
+    "--net",
+    "host",
+    "--publish",
+    `${inputs.port}:${inputs.port}`,
+    "--env",
+    `HEALTHCHECK=${inputs.healthcheck}`,
+    "--env",
+    `PORT=${inputs.port}`,
+    "--name",
+    "test-container",
+  ];
+
+  if (inputs.envFile) {
+    args.push("--env-file", inputs.envFile);
+  }
+
+  const { stdout: dockerRunStdout } = await execFile("docker", [
+    ...args,
+    imageName,
+  ]);
+  console.log(dockerRunStdout);
+
+  let attemptCount = 0;
+  const maxAttempts = 5;
+  const healthcheckURL = `http://localhost:${inputs.port}${inputs.healthcheck}`;
+  while (attemptCount <= maxAttempts) {
+    attemptCount += 1;
+    try {
+      await httpGet(healthcheckURL);
+      break;
+    } catch (e) {
+      console.log(
+        `Tested Healthcheck ${healthcheckURL} : Attempt ${attemptCount} of ${maxAttempts}`
+      );
+      await sleep(5000);
+    }
+  }
+  if (attemptCount > maxAttempts) {
+    core.error(
+      `Container did not pass healthcheck at ${healthcheckURL} after ${maxAttempts} attempts`
+    );
+    core.warning(
+      "If your container does not require a healthcheck (most jobs don't), then set healthcheck to a blank string."
+    );
+    core.startGroup("docker logs");
+    const { stdout: dockerLogsStdout } = await execFile("docker", [
+      "logs",
+      "test-container",
+    ]);
+    console.log(dockerLogsStdout);
+    core.endGroup();
+    process.exit(1);
+  }
+
+  console.log("Healthcheck Passed!");
+  const { stdout } = await execFile("docker", ["stop", "test-container"]);
+  console.log(`${stdout} stopped.`);
+}
+
+// No need to pull in axios just  for this
+function httpGet(url, options = {}) {
   return new Promise((resolve, reject) => {
-    const cmd = child_process.spawn("docker", ["build", ...args, "."], { env });
+    http
+      .get(url, options, (resp) => {
+        let data = "";
+
+        // A chunk of data has been received.
+        resp.on("data", (chunk) => {
+          data += chunk;
+        });
+
+        // The whole response has been received. Parse it and resolve the promise
+        resp.on("end", () => {
+          try {
+            const retValue = JSON.parse(data);
+            if (resp.statusCode >= 400) {
+              reject({ data: retValue, statusCode: resp.statusCode });
+            } else {
+              resolve({ data: retValue, statusCode: resp.statusCode });
+            }
+          } catch (error) {
+            reject({ data, error, statusCode: resp.statusCode });
+          }
+        });
+      })
+      .on("error", (error) => {
+        reject({ data, error, statusCode: resp.statusCode });
+      });
+  });
+}
+
+function execWithLiveOutput(command, args, env) {
+  return new Promise((resolve, reject) => {
+    const cmd = child_process.spawn(command, args, { env });
     cmd.stdout.on("data", (data) => {
       console.log(data.toString());
     });
@@ -276,6 +361,10 @@ function dockerBuild(args, env = {}) {
       }
     });
   });
+}
+
+function dockerBuild(args, env = {}) {
+  return execWithLiveOutput("docker", ["build", ...args, "."], env);
 }
 
 async function assertECRRepo(client, repository) {
@@ -361,6 +450,51 @@ function reRegisterHelperTxt(ghRepo, ghBranch) {
   
   glgroup ecr register-github-repo -r ${ghRepo} -b ${ghBranch}
   `;
+}
+
+async function loginToAllRegistries(ecrClient, inputs) {
+  const dockerBuildArgs = [];
+  await dockerLogin(ecrClient, inputs.ecrURI);
+  if (inputs.registries) {
+    // Split on comma if there's a comma, otherwise on newline
+    const urls = /,/.test(inputs.registries)
+      ? inputs.registries.split(",")
+      : inputs.registries.split("\n");
+    const awsUrl = /aws:\/\/([^:]+):([^@]+)@([0-9a-zA-Z.-]+)/;
+    await Promise.all(
+      urls
+        .filter((url) => !!url)
+        .map(async (url) => {
+          const match = awsUrl.exec(url);
+          if (match) {
+            const [, accessKeyId, secretAccessKey, ecrURI] = match;
+            const otherRegion = ecrURI.split(".")[3];
+            const otherEcrClient = new ECRClient({
+              region: otherRegion,
+              credentials: {
+                accessKeyId: accessKeyId,
+                secretAccessKey: secretAccessKey,
+              },
+            });
+
+            await assertECRRepo(otherEcrClient, ecrRepository);
+
+            await dockerLogin(otherEcrClient, ecrURI);
+
+            hosts.push(ecrURI);
+            dockerBuildArgs.push(
+              "--tag",
+              `${ecrURI}/${ecrRepository}:latest`,
+              "--tag",
+              `${ecrURI}/${ecrRepository}:${sha}`
+            );
+          } else {
+            core.warning(`Bad registries value - ${url}`);
+          }
+        })
+    );
+    return dockerBuildArgs;
+  }
 }
 
 main();
