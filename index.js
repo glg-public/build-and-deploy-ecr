@@ -317,10 +317,9 @@ async function runHealthcheck(imageName, inputs) {
 // No need to pull in axios just  for this
 function httpGet(url, options = {}) {
   return new Promise((resolve, reject) => {
+    let data = "";
     http
       .get(url, options, (resp) => {
-        let data = "";
-
         // A chunk of data has been received.
         resp.on("data", (chunk) => {
           data += chunk;
