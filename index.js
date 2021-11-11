@@ -328,7 +328,7 @@ function httpGet(url, options = {}) {
         // The whole response has been received. Parse it and resolve the promise
         resp.on("end", () => {
           try {
-            const retValue = JSON.parse(data);
+            const retValue = data;
             if (resp.statusCode >= 400) {
               reject({ data: retValue, statusCode: resp.statusCode });
             } else {
@@ -340,7 +340,7 @@ function httpGet(url, options = {}) {
         });
       })
       .on("error", (error) => {
-        reject({ data, error, statusCode: resp.statusCode });
+        reject({ data, error });
       });
   });
 }
