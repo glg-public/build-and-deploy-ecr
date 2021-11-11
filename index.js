@@ -165,8 +165,10 @@ async function main() {
    */
   const ecrClient = new ECRClient({
     region,
-    accessKeyId: inputs.accessKeyId,
-    secretAccessKey: inputs.secretAccessKey,
+    credentials: {
+      accessKeyId: inputs.accessKeyId,
+      secretAccessKey: inputs.secretAccessKey,
+    },
   });
 
   const describeCmd = new DescribeRepositoriesCommand({
