@@ -169,10 +169,6 @@ async function main() {
 
   // aws_account_id.dkr.ecr.region.amazonaws.com
   const region = inputs.ecrURI.split(".")[3];
-
-  /**
-   * Ensure ECR Repository Exists
-   */
   const ecrClient = new ECRClient({
     region,
     credentials: {
@@ -181,6 +177,9 @@ async function main() {
     },
   });
 
+  /**
+   * Ensure ECR Repository Exists
+   */
   try {
     await assertECRRepo(ecrClient, ecrRepository);
   } catch (e) {
@@ -193,6 +192,7 @@ async function main() {
     const resp = await ecrClient.send(getAuthCmd);
     console.log(JSON.stringify(resp, null, 2));
   } catch (e) {
+    core.error(e);
     core.error("Unable to obtain ECR password");
     process.exit(4);
   }
@@ -204,8 +204,7 @@ async function assertECRRepo(client, repository) {
   });
 
   try {
-    const result = await client.send(describeCmd);
-    console.log(JSON.stringify(result, null, 2));
+    await client.send(describeCmd);
   } catch (e) {
     // If it doesn't exist, create it
     if (e.name === "RepositoryNotFoundException") {
@@ -220,7 +219,7 @@ async function assertECRRepo(client, repository) {
       });
 
       try {
-        const result = await client.send(createCmd);
+        await client.send(createCmd);
         try {
           const setPolicyCmd = new SetRepositoryPolicyCommand({
             repositoryName: repository,
