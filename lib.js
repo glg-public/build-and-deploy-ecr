@@ -7,6 +7,7 @@ const {
   DescribeRepositoriesCommand,
   CreateRepositoryCommand,
   SetRepositoryPolicyCommand,
+  GetAuthorizationTokenCommand,
 } = require("@aws-sdk/client-ecr");
 
 function getInputs() {
@@ -107,6 +108,7 @@ const util = {
   execFile,
   execWithLiveOutput,
   sleep,
+  dockerLogin,
 };
 
 async function runHealthcheck(imageName, inputs) {
@@ -225,10 +227,90 @@ async function assertECRRepo(client, repository) {
   }
 }
 
+async function dockerLogin(ecrClient, ecrURI) {
+  /**
+   * Log in to Docker
+   */
+  const getAuthCmd = new GetAuthorizationTokenCommand({});
+  let ecrUser, ecrPass;
+  try {
+    const resp = await ecrClient.send(getAuthCmd);
+    const ecrAuthToken = resp.authorizationData[0].authorizationToken;
+    const [user, pass] = Buffer.from(ecrAuthToken, "base64")
+      .toString("utf8")
+      .split(":");
+    ecrUser = user;
+    ecrPass = pass;
+  } catch (e) {
+    core.error(e);
+    core.error("Unable to obtain ECR password");
+    return process.exit(4);
+  }
+
+  // Mask the token in logs
+  core.setSecret(ecrPass);
+
+  await util.execFile("docker", [
+    "login",
+    "--username",
+    ecrUser,
+    "--password",
+    ecrPass,
+    ecrURI,
+  ]);
+}
+
+async function loginToAllRegistries(ecrClient, inputs) {
+  const dockerBuildArgs = [];
+  const hosts = [];
+  await dockerLogin(ecrClient, inputs.ecrURI);
+  if (inputs.registries) {
+    // Split on comma if there's a comma, otherwise on newline
+    const urls = /,/.test(inputs.registries)
+      ? inputs.registries.split(",")
+      : inputs.registries.split("\n");
+    const awsUrl = /aws:\/\/([^:]+):([^@]+)@([0-9a-zA-Z.-]+)/;
+    await Promise.all(
+      urls
+        .filter((url) => !!url)
+        .map(async (url) => {
+          const match = awsUrl.exec(url);
+          if (match) {
+            const [, accessKeyId, secretAccessKey, ecrURI] = match;
+            const otherRegion = ecrURI.split(".")[3];
+            const otherEcrClient = new ECRClient({
+              region: otherRegion,
+              credentials: {
+                accessKeyId: accessKeyId,
+                secretAccessKey: secretAccessKey,
+              },
+            });
+
+            await assertECRRepo(otherEcrClient, ecrRepository);
+
+            await dockerLogin(otherEcrClient, ecrURI);
+
+            hosts.push(ecrURI);
+            dockerBuildArgs.push(
+              "--tag",
+              `${ecrURI}/${ecrRepository}:latest`,
+              "--tag",
+              `${ecrURI}/${ecrRepository}:${sha}`
+            );
+          } else {
+            core.warning(`Bad registries value - ${url}`);
+          }
+        })
+    );
+  }
+  return { dockerBuildArgs, hosts };
+}
+
 module.exports = {
   getInputs,
   util,
   runHealthcheck,
   dockerBuild,
   assertECRRepo,
+  loginToAllRegistries,
 };
