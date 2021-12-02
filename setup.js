@@ -1,5 +1,10 @@
 const child_process = require("child_process");
+const { promisify } = require("util");
 
-child_process.exec("npm install --production", {
-  cwd: process.env.GITHUB_ACTION_PATH,
-});
+const exec = promisify(child_process.exec);
+
+(async () => {
+  await exec("npm install --production", {
+    cwd: process.env.GITHUB_ACTION_PATH,
+  });
+})();
