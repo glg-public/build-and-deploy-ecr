@@ -2,6 +2,13 @@ const core = require("@actions/core");
 const http = require("http");
 const child_process = require("child_process");
 const { promisify } = require("util");
+const {
+  ECRClient,
+  DescribeRepositoriesCommand,
+  CreateRepositoryCommand,
+  SetRepositoryPolicyCommand,
+  GetAuthorizationTokenCommand,
+} = require("@aws-sdk/client-ecr");
 
 function getInputs() {
   const accessKeyId = core.getInput("access_key_id", { required: true });
@@ -170,9 +177,54 @@ function dockerBuild(args, env = {}) {
   return util.execWithLiveOutput("docker", ["build", ...args, "."], env);
 }
 
+async function assertECRRepo(client, repository) {
+  const describeCmd = new DescribeRepositoriesCommand({
+    repositoryNames: [repository],
+  });
+
+  try {
+    await client.send(describeCmd);
+  } catch (e) {
+    // If it doesn't exist, create it
+    if (e.name === "RepositoryNotFoundException") {
+      const createCmd = new CreateRepositoryCommand({
+        repositoryName: repository,
+        tags: [
+          {
+            Key: "ManagedBy",
+            Value: "GitHub",
+          },
+        ],
+      });
+
+      try {
+        await client.send(createCmd);
+        try {
+          const setPolicyCmd = new SetRepositoryPolicyCommand({
+            repositoryName: repository,
+            policyText: JSON.stringify(ecrPolicy),
+          });
+          await client.send(setPolicyCmd);
+        } catch (eee) {
+          const err = new Error(`Could not set ECR policy for ${repository}`);
+          err.name = "CouldNotSetPolicy";
+          err.repository = repository;
+          throw err;
+        }
+      } catch (ee) {
+        const err = new Error(`Could not create ECR Repository: ${repository}`);
+        err.name = "CouldNotCreateRepo";
+        err.repository = repository;
+        throw err;
+      }
+    } else throw e;
+  }
+}
+
 module.exports = {
   getInputs,
   util,
   runHealthcheck,
   dockerBuild,
+  assertECRRepo,
 };
