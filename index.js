@@ -8,59 +8,11 @@ const {
   GetAuthorizationTokenCommand,
 } = require("@aws-sdk/client-ecr");
 
-const child_process = require("child_process");
-const { promisify } = require("util");
 const fs = require("fs").promises;
-const http = require("http");
+
+const lib = require("./lib");
 
 const ecrPolicy = require("./ecr-policy.json");
-
-const execFile = promisify(child_process.execFile);
-
-/**
- * UTILITY FUNCTIONS
- */
-
-function getInputs() {
-  const accessKeyId = core.getInput("access_key_id", { required: true });
-  const secretAccessKey = core.getInput("secret_access_key", {
-    required: true,
-  });
-  const ecrURI = core.getInput("ecr_uri", { required: true });
-  const architecture = core.getInput("architecture");
-  const buildArgs = core.getInput("build-args");
-  const buildConfig = core.getInput("build_config");
-  const deploy = core.getBooleanInput("deploy");
-  const dockerfile = core.getInput("dockerfile");
-  const envFile = core.getInput("env_file");
-  const githubSSHKey = core.getInput("github_ssh_key");
-  const healthcheck = core.getInput("healthcheck");
-  const platform = core.getInput("platform");
-  const port = core.getInput("port");
-  const registries = core.getInput("registries");
-  return {
-    accessKeyId,
-    secretAccessKey,
-    ecrURI,
-    architecture,
-    buildArgs,
-    buildConfig,
-    deploy,
-    dockerfile,
-    envFile,
-    githubSSHKey,
-    healthcheck,
-    platform,
-    port,
-    registries,
-  };
-}
-
-function sleep(ms) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
-}
 
 function reRegisterHelperTxt(ghRepo, ghBranch) {
   return `
@@ -68,56 +20,6 @@ function reRegisterHelperTxt(ghRepo, ghBranch) {
   
   glgroup ecr register-github-repo -r ${ghRepo} -b ${ghBranch}
   `;
-}
-
-// No need to pull in axios just  for this
-function httpGet(url, options = {}) {
-  return new Promise((resolve, reject) => {
-    let data = "";
-    http
-      .get(url, options, (resp) => {
-        // A chunk of data has been received.
-        resp.on("data", (chunk) => {
-          data += chunk;
-        });
-
-        // The whole response has been received. Parse it and resolve the promise
-        resp.on("end", () => {
-          try {
-            const retValue = data;
-            if (resp.statusCode >= 400) {
-              reject({ data: retValue, statusCode: resp.statusCode });
-            } else {
-              resolve({ data: retValue, statusCode: resp.statusCode });
-            }
-          } catch (error) {
-            reject({ data, error, statusCode: resp.statusCode });
-          }
-        });
-      })
-      .on("error", (error) => {
-        reject({ data, error });
-      });
-  });
-}
-
-function execWithLiveOutput(command, args, env) {
-  return new Promise((resolve, reject) => {
-    const cmd = child_process.spawn(command, args, { env });
-    cmd.stdout.on("data", (data) => {
-      console.log(data.toString());
-    });
-    cmd.stderr.on("data", (data) => {
-      console.error(data.toString());
-    });
-    cmd.on("exit", (code) => {
-      if (code === 0) {
-        return resolve();
-      } else {
-        return reject(code);
-      }
-    });
-  });
 }
 
 async function runHealthcheck(imageName, inputs) {
@@ -140,7 +42,7 @@ async function runHealthcheck(imageName, inputs) {
     args.push("--env-file", inputs.envFile);
   }
 
-  const { stdout: dockerRunStdout } = await execFile("docker", [
+  const { stdout: dockerRunStdout } = await lib.execFile("docker", [
     ...args,
     imageName,
   ]);
@@ -152,13 +54,13 @@ async function runHealthcheck(imageName, inputs) {
   while (attemptCount <= maxAttempts) {
     attemptCount += 1;
     try {
-      await httpGet(healthcheckURL);
+      await lib.httpGet(healthcheckURL);
       break;
     } catch (e) {
       console.log(
         `Tested Healthcheck ${healthcheckURL} : Attempt ${attemptCount} of ${maxAttempts}`
       );
-      await sleep(5000);
+      await lib.sleep(5000);
     }
   }
   if (attemptCount > maxAttempts) {
@@ -169,7 +71,7 @@ async function runHealthcheck(imageName, inputs) {
       "If your container does not require a healthcheck (most jobs don't), then set healthcheck to a blank string."
     );
     core.startGroup("docker logs");
-    const { stdout: dockerLogsStdout } = await execFile("docker", [
+    const { stdout: dockerLogsStdout } = await lib.execFile("docker", [
       "logs",
       "test-container",
     ]);
@@ -179,12 +81,12 @@ async function runHealthcheck(imageName, inputs) {
   }
 
   console.log("Healthcheck Passed!");
-  const { stdout } = await execFile("docker", ["stop", "test-container"]);
+  const { stdout } = await lib.execFile("docker", ["stop", "test-container"]);
   console.log(`${stdout} stopped.`);
 }
 
 function dockerBuild(args, env = {}) {
-  return execWithLiveOutput("docker", ["build", ...args, "."], env);
+  return lib.execWithLiveOutput("docker", ["build", ...args, "."], env);
 }
 
 async function assertECRRepo(client, repository) {
@@ -254,7 +156,7 @@ async function dockerLogin(ecrClient, ecrURI) {
   // Mask the token in logs
   core.setSecret(ecrPass);
 
-  await execFile("docker", [
+  await lib.execFile("docker", [
     "login",
     "--username",
     ecrUser,
@@ -314,20 +216,20 @@ async function loginToAllRegistries(ecrClient, inputs) {
  * The main workflow
  */
 async function main() {
-  const inputs = getInputs();
+  const inputs = lib.getInputs();
   let buildxEnabled = false;
 
   /**
    * Versions
    */
   core.startGroup("docker version");
-  const { stdout: dockerVersion } = await execFile("docker", ["version"]);
+  const { stdout: dockerVersion } = await lib.execFile("docker", ["version"]);
   console.log(dockerVersion);
   core.endGroup();
 
   core.startGroup("docker buildx version");
   try {
-    const { stdout: buildxVersion } = await execFile("docker", [
+    const { stdout: buildxVersion } = await lib.execFile("docker", [
       "buildx",
       "version",
     ]);
@@ -340,7 +242,7 @@ async function main() {
   core.endGroup();
 
   core.startGroup("docker info");
-  const { stdout: dockerInfo } = await execFile("docker", ["info"]);
+  const { stdout: dockerInfo } = await lib.execFile("docker", ["info"]);
   console.log(dockerInfo);
   core.endGroup();
 
@@ -399,11 +301,11 @@ async function main() {
      * appease it, otherwise default to build args
      */
     if (/mount=type=ssh/.test(dockerfile)) {
-      await execFile("ssh-agent", ["-a", sshAuthSock]);
+      await lib.execFile("ssh-agent", ["-a", sshAuthSock]);
       const key = Buffer.from(inputs.githubSSHKey, "base64").toString("utf8");
       const keyFileName = "key";
       await fs.writeFile(keyFileName, key);
-      await execFile("ssh-add", [keyFileName]);
+      await lib.execFile("ssh-add", [keyFileName]);
     } else {
       dockerBuildArgs.push(
         "--build-arg",
@@ -497,13 +399,19 @@ async function main() {
    * Push up all tags
    */
   if (inputs.deploy) {
-    await execWithLiveOutput("docker", ["push", containerBase, "--all-tags"]);
+    await lib.execWithLiveOutput("docker", [
+      "push",
+      containerBase,
+      "--all-tags",
+    ]);
   }
 
   /**
    * Log out of all registries
    */
-  await Promise.all(hosts.map((host) => execFile("docker", ["logout", host])));
+  await Promise.all(
+    hosts.map((host) => lib.execFile("docker", ["logout", host]))
+  );
 }
 
 main();
