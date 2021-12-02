@@ -2,17 +2,12 @@ const core = require("@actions/core");
 const github = require("@actions/github");
 const {
   ECRClient,
-  DescribeRepositoriesCommand,
-  CreateRepositoryCommand,
-  SetRepositoryPolicyCommand,
   GetAuthorizationTokenCommand,
 } = require("@aws-sdk/client-ecr");
 
 const fs = require("fs").promises;
 
 const lib = require("./lib");
-
-const ecrPolicy = require("./ecr-policy.json");
 
 function reRegisterHelperTxt(ghRepo, ghBranch) {
   return `

@@ -2,12 +2,11 @@ const core = require("@actions/core");
 const http = require("http");
 const child_process = require("child_process");
 const { promisify } = require("util");
+const ecrPolicy = require("./ecr-policy.json");
 const {
-  ECRClient,
   DescribeRepositoriesCommand,
   CreateRepositoryCommand,
   SetRepositoryPolicyCommand,
-  GetAuthorizationTokenCommand,
 } = require("@aws-sdk/client-ecr");
 
 function getInputs() {
@@ -212,10 +211,15 @@ async function assertECRRepo(client, repository) {
           throw err;
         }
       } catch (ee) {
-        const err = new Error(`Could not create ECR Repository: ${repository}`);
-        err.name = "CouldNotCreateRepo";
-        err.repository = repository;
-        throw err;
+        if (ee.name !== "CouldNotSetPolicy") {
+          const err = new Error(
+            `Could not create ECR Repository: ${repository}`
+          );
+          err.name = "CouldNotCreateRepo";
+          err.repository = repository;
+          throw err;
+        }
+        throw ee;
       }
     } else throw e;
   }
