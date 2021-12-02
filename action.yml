@@ -62,5 +62,5 @@ outputs:
     description: current github commit sha that triggered the workflow
 
 runs:
-  using: node12
+  using: node16
   main: index.js
