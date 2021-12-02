@@ -166,8 +166,13 @@ async function runHealthcheck(imageName, inputs) {
   console.log(`${stdout} stopped.`);
 }
 
+function dockerBuild(args, env = {}) {
+  return util.execWithLiveOutput("docker", ["build", ...args, "."], env);
+}
+
 module.exports = {
   getInputs,
   util,
   runHealthcheck,
+  dockerBuild,
 };

@@ -22,10 +22,6 @@ function reRegisterHelperTxt(ghRepo, ghBranch) {
   `;
 }
 
-function dockerBuild(args, env = {}) {
-  return lib.execWithLiveOutput("docker", ["build", ...args, "."], env);
-}
-
 async function assertECRRepo(client, repository) {
   const describeCmd = new DescribeRepositoriesCommand({
     repositoryNames: [repository],
@@ -320,7 +316,7 @@ async function main() {
    * Build the image
    */
   core.startGroup("Docker Build");
-  await dockerBuild(dockerBuildArgs, buildEnv);
+  await lib.dockerBuild(dockerBuildArgs, buildEnv);
   core.endGroup();
 
   /**
