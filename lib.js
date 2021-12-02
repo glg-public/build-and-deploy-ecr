@@ -96,10 +96,78 @@ function execWithLiveOutput(command, args, env) {
   });
 }
 
-module.exports = {
-  getInputs,
-  sleep,
+const util = {
   httpGet,
   execFile,
   execWithLiveOutput,
+  sleep,
+};
+
+async function runHealthcheck(imageName, inputs) {
+  const args = [
+    "run",
+    "--detach",
+    "--net",
+    "host",
+    "--publish",
+    `${inputs.port}:${inputs.port}`,
+    "--env",
+    `HEALTHCHECK=${inputs.healthcheck}`,
+    "--env",
+    `PORT=${inputs.port}`,
+    "--name",
+    "test-container",
+  ];
+
+  if (inputs.envFile) {
+    args.push("--env-file", inputs.envFile);
+  }
+
+  const { stdout: dockerRunStdout } = await util.execFile("docker", [
+    ...args,
+    imageName,
+  ]);
+  console.log(dockerRunStdout);
+
+  let attemptCount = 0;
+  const maxAttempts = 5;
+  const healthcheckURL = `http://localhost:${inputs.port}${inputs.healthcheck}`;
+  while (attemptCount < maxAttempts) {
+    attemptCount += 1;
+    try {
+      await util.httpGet(healthcheckURL);
+      break;
+    } catch (e) {
+      console.log(
+        `Tested Healthcheck ${healthcheckURL} : Attempt ${attemptCount} of ${maxAttempts}`
+      );
+      await util.sleep(5000);
+    }
+  }
+  if (attemptCount >= maxAttempts) {
+    core.error(
+      `Container did not pass healthcheck at ${healthcheckURL} after ${maxAttempts} attempts`
+    );
+    core.warning(
+      "If your container does not require a healthcheck (most jobs don't), then set healthcheck to a blank string."
+    );
+    core.startGroup("docker logs");
+    const { stdout: dockerLogsStdout } = await util.execFile("docker", [
+      "logs",
+      "test-container",
+    ]);
+    console.log(dockerLogsStdout);
+    core.endGroup();
+    process.exit(1);
+  }
+
+  console.log("Healthcheck Passed!");
+  const { stdout } = await util.execFile("docker", ["stop", "test-container"]);
+  console.log(`${stdout} stopped.`);
+}
+
+module.exports = {
+  getInputs,
+  util,
+  runHealthcheck,
 };
