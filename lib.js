@@ -8,6 +8,7 @@ const {
   CreateRepositoryCommand,
   SetRepositoryPolicyCommand,
   GetAuthorizationTokenCommand,
+  ECRClient,
 } = require("@aws-sdk/client-ecr");
 
 function getInputs() {
@@ -109,6 +110,7 @@ const util = {
   execWithLiveOutput,
   sleep,
   dockerLogin,
+  assertECRRepo,
 };
 
 async function runHealthcheck(imageName, inputs) {
@@ -263,7 +265,7 @@ async function dockerLogin(ecrClient, ecrURI) {
 async function loginToAllRegistries(ecrClient, inputs) {
   const dockerBuildArgs = [];
   const hosts = [];
-  await dockerLogin(ecrClient, inputs.ecrURI);
+  await util.dockerLogin(ecrClient, inputs.ecrURI);
   if (inputs.registries) {
     // Split on comma if there's a comma, otherwise on newline
     const urls = /,/.test(inputs.registries)
@@ -286,9 +288,9 @@ async function loginToAllRegistries(ecrClient, inputs) {
               },
             });
 
-            await assertECRRepo(otherEcrClient, ecrRepository);
+            await util.assertECRRepo(otherEcrClient, ecrRepository);
 
-            await dockerLogin(otherEcrClient, ecrURI);
+            await util.dockerLogin(otherEcrClient, ecrURI);
 
             hosts.push(ecrURI);
             dockerBuildArgs.push(

@@ -2,7 +2,6 @@ const sinon = require("sinon");
 const core = require("@actions/core");
 const { GetAuthorizationTokenCommand } = require("@aws-sdk/client-ecr");
 const lib = require("../lib");
-const { expect } = require("chai");
 
 const sandbox = sinon.createSandbox();
 
