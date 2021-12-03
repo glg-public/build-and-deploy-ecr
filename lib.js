@@ -327,6 +327,7 @@ function reRegisterHelperTxt(ghRepo, ghBranch) {
  * The main workflow
  */
 async function main() {
+  console.log(JSON.stringify(github.context));
   const inputs = util.getInputs();
   let buildxEnabled = false;
 
