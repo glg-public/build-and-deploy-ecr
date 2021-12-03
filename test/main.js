@@ -150,7 +150,33 @@ describe("Main Workflow", () => {
     ).to.be.false;
   });
 
-  it("passes the git sha as a build arg only if used in the dockerfile");
+  it("passes the git sha as a build arg only if used in the dockerfile", async () => {
+    const readStub = sandbox.stub(fs, "readFile").resolves("GITHUB_SHA");
+    const inputs = {
+      dockerfile: "Dockerfile",
+      githubSSHKey: "abcdefgh",
+      ecrURI: "aws_account_id.dkr.ecr.region.amazonaws.com",
+    };
+    inputStub.returns(inputs);
+
+    await lib.main();
+
+    let buildArgs = buildStub.getCall(0).args[0];
+    expect(
+      buildArgs.includesInOrder("--build-arg", `GITHUB_SHA=${context.sha}`)
+    ).to.be.true;
+
+    readStub.resolves("");
+    buildStub.resetHistory();
+
+    await lib.main();
+
+    // Without GITHUB_SHA in the dockerfile, it will not add the build arg
+    buildArgs = buildStub.getCall(0).args[0];
+    expect(
+      buildArgs.includesInOrder("--build-arg", `GITHUB_SHA=${context.sha}`)
+    ).to.be.false;
+  });
 
   it("allows specifying an alternate dockerfile");
 
