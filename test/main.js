@@ -15,9 +15,11 @@ let inputStub,
   loginAllStub,
   buildStub,
   healthcheckStub,
-  execLiveStub;
+  execLiveStub,
+  writeFileStub;
 const version = "Client:\n  Version: 20.10.2";
 const buildxVersion = "something about buildx version";
+const context = require("./fixtures/context.json");
 describe("Main Workflow", () => {
   beforeEach(() => {
     sandbox.restore();
@@ -31,7 +33,6 @@ describe("Main Workflow", () => {
       .resolves({ stdout: buildxVersion });
 
     exitStub = sandbox.stub(process, "exit");
-    logStub = sandbox.stub(console, "log");
     outputStub = sandbox.stub(core, "setOutput");
 
     assertRepoStub = sandbox.stub(lib.util, "assertECRRepo").resolves();
@@ -41,12 +42,16 @@ describe("Main Workflow", () => {
     buildStub = sandbox.stub(lib.util, "dockerBuild").resolves();
     healthcheckStub = sandbox.stub(lib.util, "runHealthcheck").resolves();
     execLiveStub = sandbox.stub(lib.util, "execWithLiveOutput").resolves();
+    writeFileStub = sandbox.stub(fs, "writeFile").resolves();
 
-    sandbox.stub(github, "context").get(() => {});
+    sandbox.stub(github, "context").value(context);
 
+    // Comment this out when debugging tests
+    logStub = sandbox.stub(console, "log");
     sandbox.stub(core, "error");
     sandbox.stub(core, "startGroup");
     sandbox.stub(core, "endGroup");
+    sandbox.stub(core, "warning");
   });
 
   after(() => {
@@ -107,6 +112,7 @@ describe("Main Workflow", () => {
     const inputs = {
       dockerfile: "Dockerfile",
       githubSSHKey: "abcdefgh",
+      ecrURI: "aws_account_id.dkr.ecr.region.amazonaws.com",
     };
     inputStub.returns(inputs);
 
@@ -119,10 +125,30 @@ describe("Main Workflow", () => {
         "--build-arg",
         `GITHUB_SSH_KEY=${inputs.githubSSHKey}`
       )
-    );
+    ).to.be.true;
   });
 
-  it("writes an ssh key if ssh mount is requested in dockerfile");
+  it("writes an ssh key if ssh mount is requested in dockerfile", async () => {
+    sandbox.stub(fs, "readFile").resolves("mount=type=ssh");
+    const inputs = {
+      dockerfile: "Dockerfile",
+      githubSSHKey: Buffer.from("abcdefgh", "utf8").toString("base64"),
+      ecrURI: "aws_account_id.dkr.ecr.region.amazonaws.com",
+    };
+    inputStub.returns(inputs);
+
+    await lib.main();
+
+    expect(writeFileStub.firstCall.args[1]).to.equal("abcdefgh");
+
+    const buildArgs = buildStub.getCall(0).args[0];
+    expect(
+      buildArgs.includesInOrder(
+        "--build-arg",
+        `GITHUB_SSH_KEY=${inputs.githubSSHKey}`
+      )
+    ).to.be.false;
+  });
 
   it("passes the git sha as a build arg only if used in the dockerfile");
 

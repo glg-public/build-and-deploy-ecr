@@ -327,7 +327,6 @@ function reRegisterHelperTxt(ghRepo, ghBranch) {
  * The main workflow
  */
 async function main() {
-  console.log(JSON.stringify(github.context));
   const inputs = util.getInputs();
   let buildxEnabled = false;
 
@@ -413,11 +412,11 @@ async function main() {
      * appease it, otherwise default to build args
      */
     if (/mount=type=ssh/.test(dockerfile)) {
-      await lib.util.execFile("ssh-agent", ["-a", sshAuthSock]);
+      await util.execFile("ssh-agent", ["-a", sshAuthSock]);
       const key = Buffer.from(inputs.githubSSHKey, "base64").toString("utf8");
       const keyFileName = "key";
       await fs.writeFile(keyFileName, key);
-      await lib.util.execFile("ssh-add", [keyFileName]);
+      await util.execFile("ssh-add", [keyFileName]);
     } else {
       dockerBuildArgs.push(
         "--build-arg",
