@@ -326,9 +326,50 @@ describe("Main Workflow", () => {
     );
   });
 
-  it("healthchecks the image");
+  it("healthchecks the image", async () => {
+    sandbox.stub(fs, "readFile").resolves("");
+    const inputs = {
+      dockerfile: "Dockerfile",
+      ecrURI: "aws_account_id.dkr.ecr.region.amazonaws.com",
+      healthcheck: "/healthcheck",
+    };
+    inputStub.returns(inputs);
 
-  it("pushes the image up to all registries and tags");
+    await lib.main();
 
-  it("logs out of all registries");
+    expect(healthcheckStub.callCount).to.equal(1);
+  });
+
+  it("pushes the image up to all registries and tags", async () => {
+    sandbox.stub(fs, "readFile").resolves("");
+    const inputs = {
+      dockerfile: "Dockerfile",
+      ecrURI: "aws_account_id.dkr.ecr.region.amazonaws.com",
+      healthcheck: "/healthcheck",
+      deploy: true, // necessary for push to happen
+    };
+    inputStub.returns(inputs);
+
+    await lib.main();
+
+    expect(execLiveStub.getCall(0).args).to.deep.equal([
+      "docker",
+      ["push", `${inputs.ecrURI}/${ecrRepository}`, "--all-tags"],
+    ]);
+  });
+
+  it("logs out of all registries", async () => {
+    sandbox.stub(fs, "readFile").resolves("");
+    const inputs = {
+      dockerfile: "Dockerfile",
+      ecrURI: "aws_account_id.dkr.ecr.region.amazonaws.com",
+      healthcheck: "/healthcheck",
+    };
+    inputStub.returns(inputs);
+
+    await lib.main();
+
+    const execArgs = execStub.lastCall.args;
+    expect(execArgs).to.deep.equal(["docker", ["logout", inputs.ecrURI]]);
+  });
 });
