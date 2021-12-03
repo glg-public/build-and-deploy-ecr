@@ -262,7 +262,7 @@ async function dockerLogin(ecrClient, ecrURI) {
   ]);
 }
 
-async function loginToAllRegistries(ecrClient, inputs) {
+async function loginToAllRegistries(ecrClient, inputs, ecrRepository, sha) {
   const dockerBuildArgs = [];
   const hosts = [];
   await util.dockerLogin(ecrClient, inputs.ecrURI);
@@ -283,8 +283,8 @@ async function loginToAllRegistries(ecrClient, inputs) {
             const otherEcrClient = new ECRClient({
               region: otherRegion,
               credentials: {
-                accessKeyId: accessKeyId,
-                secretAccessKey: secretAccessKey,
+                accessKeyId,
+                secretAccessKey,
               },
             });
 

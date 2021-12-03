@@ -170,7 +170,7 @@ async function main() {
    * Log in to Docker
    */
   const { dockerBuildArgs: moreArgs, hosts: moreHosts } =
-    await lib.loginToAllRegistries(ecrClient, inputs);
+    await lib.loginToAllRegistries(ecrClient, inputs, ecrRepository, sha);
   dockerBuildArgs.push(...moreArgs);
   hosts.push(...moreHosts);
 
