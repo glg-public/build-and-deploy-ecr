@@ -178,11 +178,56 @@ describe("Main Workflow", () => {
     ).to.be.false;
   });
 
-  it("allows specifying an alternate dockerfile");
+  it("allows specifying an alternate dockerfile", async () => {
+    sandbox.stub(fs, "readFile").resolves("");
+    const inputs = {
+      dockerfile: "prod.dockerfile",
+      githubSSHKey: "abcdefgh",
+      ecrURI: "aws_account_id.dkr.ecr.region.amazonaws.com",
+    };
+    inputStub.returns(inputs);
 
-  it("allows passing in a build config");
+    await lib.main();
 
-  it("allows specifying an alternate platform");
+    const buildArgs = buildStub.getCall(0).args[0];
+    expect(buildArgs.includesInOrder("-f", inputs.dockerfile)).to.be.true;
+  });
+
+  it("allows passing in a build config", async () => {
+    sandbox.stub(fs, "readFile").resolves("");
+    const inputs = {
+      dockerfile: "Dockerfile",
+      ecrURI: "aws_account_id.dkr.ecr.region.amazonaws.com",
+      buildConfig: "buildconfig.json",
+    };
+    inputStub.returns(inputs);
+
+    await lib.main();
+
+    const buildArgs = buildStub.getCall(0).args[0];
+    expect(
+      buildArgs.includesInOrder(
+        "--build-arg",
+        `BUILD_CONFIG=${inputs.buildConfig}`
+      )
+    ).to.be.true;
+  });
+
+  it("allows specifying an alternate platform", async () => {
+    sandbox.stub(fs, "readFile").resolves("");
+    const inputs = {
+      dockerfile: "Dockerfile",
+      ecrURI: "aws_account_id.dkr.ecr.region.amazonaws.com",
+      platform: "arm64",
+    };
+    inputStub.returns(inputs);
+
+    await lib.main();
+
+    const buildArgs = buildStub.getCall(0).args[0];
+    expect(buildArgs.includesInOrder("--platform", inputs.platform, "--load"))
+      .to.be.true;
+  });
 
   it("looks for a RUN heredoc and sets environment variables if present");
 
