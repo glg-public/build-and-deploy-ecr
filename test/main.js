@@ -6,7 +6,7 @@ const { expect } = require("chai");
 const exp = require("constants");
 const sandbox = sinon.createSandbox();
 
-let inputStub, execStub, logStub, outputStub, readFileStub, exitStub;
+let inputStub, execStub, logStub, outputStub, exitStub;
 const version = "Client:\n  Version: 20.10.2";
 const buildxVersion = "something about buildx version";
 describe("Main Workflow", () => {
@@ -36,7 +36,7 @@ describe("Main Workflow", () => {
     execStub.resolves({ stdout: "hello world" });
 
     // Short circuit by not having a dockerfile
-    readFileStub = sandbox.stub(fs, "readFile").rejects();
+    sandbox.stub(fs, "readFile").rejects();
     await lib.main();
 
     expect(logStub.firstCall.args[0]).to.equal(version);
@@ -49,7 +49,7 @@ describe("Main Workflow", () => {
       .resolves({ stdout: buildxVersion });
 
     // Short circuit by not having a dockerfile
-    readFileStub = sandbox.stub(fs, "readFile").rejects();
+    sandbox.stub(fs, "readFile").rejects();
     await lib.main();
 
     expect(logStub.secondCall.args[0]).to.equal(buildxVersion);
@@ -65,11 +65,32 @@ describe("Main Workflow", () => {
     expect(outputStub.callCount).to.equal(1);
   });
 
-  it("exits 2 if no dockerfile can be found and read");
+  it("exits 2 if no dockerfile can be found and read", async () => {
+    execStub.resolves({ stdout: "hello world" });
 
-  it("exits 3 if platform is requested but buildx is not available");
+    // Short circuit by not having a dockerfile
+    sandbox.stub(fs, "readFile").rejects();
+    await lib.main();
 
-  it("uses a build arg for ssh key by default");
+    expect(exitStub.firstCall.args[0]).to.equal(2);
+  });
+
+  it("exits 3 if platform is requested but buildx is not available", async () => {
+    execStub.resolves({ stdout: "hello world" });
+    execStub.withArgs("docker", ["buildx", "version"]).rejects();
+    inputStub.returns({
+      platform: "arm64",
+      dockerfile: "Dockerfile",
+    });
+
+    sandbox.stub(fs, "readFile").resolves("");
+
+    await lib.main();
+
+    expect(exitStub.firstCall.args[0]).to.equal(3);
+  });
+
+  it("uses a build arg for ssh key by default", async () => {});
 
   it("writes an ssh key if ssh mount is requested in dockerfile");
 
