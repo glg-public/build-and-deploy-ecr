@@ -3,7 +3,8 @@ const lib = require("../lib");
 const core = require("@actions/core");
 const github = require("@actions/github");
 const fs = require("fs").promises;
-const { expect } = require("chai");
+const { ECRClient } = require("@aws-sdk/client-ecr");
+
 const sandbox = sinon.createSandbox();
 
 let inputStub,
@@ -20,6 +21,8 @@ let inputStub,
 const version = "Client:\n  Version: 20.10.2";
 const buildxVersion = "something about buildx version";
 const context = require("./fixtures/context.json");
+const ecrRepository = `github/${context.payload.repository.full_name}/testing-new-build-action`;
+const { expect } = require("chai");
 describe("Main Workflow", () => {
   beforeEach(() => {
     sandbox.restore();
@@ -229,15 +232,99 @@ describe("Main Workflow", () => {
       .to.be.true;
   });
 
-  it("looks for a RUN heredoc and sets environment variables if present");
+  it("looks for a RUN heredoc and sets environment variables if present", async () => {
+    sandbox.stub(fs, "readFile").resolves("RUN << some commands");
+    const inputs = {
+      dockerfile: "Dockerfile",
+      ecrURI: "aws_account_id.dkr.ecr.region.amazonaws.com",
+      platform: "arm64",
+    };
+    inputStub.returns(inputs);
 
-  it("asserts that the ecr repo exists");
+    await lib.main();
 
-  it("logs into all specified registries");
+    const buildEnv = buildStub.getCall(0).args[1];
+    expect(buildEnv).to.deep.equal({
+      DOCKER_BUILDKIT: 1,
+      BUILDKIT_PROGRESS: "plain",
+    });
+  });
 
-  it("accepts a newline-separated list of build-args");
+  it("asserts that the ecr repo exists", async () => {
+    sandbox.stub(fs, "readFile").resolves("");
+    const inputs = {
+      dockerfile: "Dockerfile",
+      ecrURI: "aws_account_id.dkr.ecr.region.amazonaws.com",
+    };
+    inputStub.returns(inputs);
 
-  it("builds the image with all necessary args and envvars");
+    await lib.main();
+
+    const assertArgs = assertRepoStub.getCall(0).args;
+    expect(assertArgs[0]).to.be.an.instanceOf(ECRClient);
+    expect(assertArgs[1]).to.equal(ecrRepository);
+  });
+
+  it("logs into all specified registries", async () => {
+    sandbox.stub(fs, "readFile").resolves("");
+    const inputs = {
+      dockerfile: "Dockerfile",
+      ecrURI: "aws_account_id.dkr.ecr.region.amazonaws.com",
+      registries: "aws://user:pass@someuri2,aws://user:pass@someuri3",
+    };
+    inputStub.returns(inputs);
+
+    await lib.main();
+
+    const loginArgs = loginAllStub.getCall(0).args;
+    expect(loginArgs[0]).to.be.an.instanceOf(ECRClient);
+    expect(loginArgs[1]).to.deep.equal(inputs);
+    expect(loginArgs[2]).to.equal(ecrRepository);
+    expect(loginArgs[3]).to.equal(context.sha);
+  });
+
+  it("accepts a newline-separated list of build-args", async () => {
+    sandbox.stub(fs, "readFile").resolves("");
+    const inputs = {
+      dockerfile: "Dockerfile",
+      ecrURI: "aws_account_id.dkr.ecr.region.amazonaws.com",
+      buildArgs: "SOMETHING=pants\nOTHER=cats",
+    };
+    inputStub.returns(inputs);
+
+    await lib.main();
+
+    const buildArgs = buildStub.getCall(0).args[0];
+    expect(
+      buildArgs.includesInOrder(
+        "--build-arg",
+        "SOMETHING=pants",
+        "--build-arg",
+        "OTHER=cats"
+      )
+    );
+  });
+
+  it("builds the image with all necessary args and envvars", async () => {
+    sandbox.stub(fs, "readFile").resolves("");
+    const inputs = {
+      dockerfile: "Dockerfile",
+      ecrURI: "aws_account_id.dkr.ecr.region.amazonaws.com",
+    };
+    inputStub.returns(inputs);
+
+    await lib.main();
+
+    const buildArgs = buildStub.getCall(0).args[0];
+    expect(
+      buildArgs.includesInOrder(
+        "--tag",
+        `${inputs.ecrURI}/${ecrRepository}:latest`,
+        "--tag",
+        `${inputs.ecrURI}/${ecrRepository}:${context.sha}`
+      )
+    );
+  });
 
   it("healthchecks the image");
 
