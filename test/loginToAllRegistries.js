@@ -15,6 +15,10 @@ describe("lib.loginToAllRegistries", () => {
 
   it("always logs into primary registry");
 
+  it("splits registries on comma if there is a comma");
+
+  it("splits registries on newline if no comma");
+
   it("asserts and logs into all other provided registries");
 
   it("returns additional docker build args and hosts");
