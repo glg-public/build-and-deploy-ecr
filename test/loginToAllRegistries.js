@@ -1,8 +1,6 @@
 const sinon = require("sinon");
-const core = require("@actions/core");
 const lib = require("../lib");
 const { ECRClient } = require("@aws-sdk/client-ecr");
-const { expect } = require("chai");
 
 const sandbox = sinon.createSandbox();
 
