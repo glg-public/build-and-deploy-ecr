@@ -43,17 +43,24 @@ describe("lib.runHealthcheck", () => {
     expect(dockerRunArgs).to.include("--detach");
 
     // Container will have a port mapped to the host
-    expect(dockerRunArgs).to.include(
-      `${defaultInputs.port}:${defaultInputs.port}`
-    );
+    expect(
+      dockerRunArgs.includesInOrder(
+        "--publish",
+        `${defaultInputs.port}:${defaultInputs.port}`
+      )
+    ).to.be.true;
 
     // Container will have a healthcheck defined
-    expect(dockerRunArgs).to.include(
-      `HEALTHCHECK=${defaultInputs.healthcheck}`
-    );
+    expect(
+      dockerRunArgs.includesInOrder(
+        "--env",
+        `HEALTHCHECK=${defaultInputs.healthcheck}`
+      )
+    ).to.be.true;
 
     // Container will have the exposed port in it's env
-    expect(dockerRunArgs).to.include(`PORT=${defaultInputs.port}`);
+    expect(dockerRunArgs.includesInOrder("--env", `PORT=${defaultInputs.port}`))
+      .to.be.true;
 
     // Last arg passed to docker run will be the image name
     expect(dockerRunArgs.pop()).to.equal(imageName);
@@ -70,8 +77,8 @@ describe("lib.runHealthcheck", () => {
 
     const dockerRunArgs = execStub.getCall(0).args[1];
 
-    expect(dockerRunArgs).to.include("--env-file");
-    expect(dockerRunArgs).to.include(inputs.envFile);
+    expect(dockerRunArgs.includesInOrder("--env-file", inputs.envFile)).to.be
+      .true;
   });
 
   it("tries to poll the healthcheck 5 times and then exits 1", async () => {
