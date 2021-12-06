@@ -302,9 +302,9 @@ async function loginToAllRegistries(ecrClient, inputs, ecrRepository, sha) {
             hosts.push(ecrURI);
             dockerBuildArgs.push(
               "--tag",
-              `${ecrURI}/${ecrRepository}:latest`,
+              `${ecrURI}/${ecrRepository}:latest`, // Should this be prefixed for other platforms?
               "--tag",
-              `${ecrURI}/${ecrRepository}:${sha}`
+              `${ecrURI}/${ecrRepository}:${sha}` // Should this be prefixed for other platforms?
             );
           } else {
             core.warning(`Bad registries value - ${url}`);
@@ -315,11 +315,11 @@ async function loginToAllRegistries(ecrClient, inputs, ecrRepository, sha) {
   return { dockerBuildArgs, hosts };
 }
 
-function reRegisterHelperTxt(ghRepo, ghBranch) {
+function reRegisterHelperTxt(ghRepo) {
   return `
   Please re-register this github repository to get updated credentials:
   
-  glgroup ecr register-github-repo -r ${ghRepo} -b ${ghBranch}
+  glgroup ecr register-github-repo -r ${ghRepo}
   `;
 }
 
@@ -382,11 +382,7 @@ async function main() {
     ref,
     sha,
     payload: {
-      repository: {
-        full_name: ghRepo,
-        name: repoName,
-        default_branch: defaultBranch,
-      },
+      repository: { full_name: ghRepo, name: repoName },
     },
   } = github.context;
 
@@ -464,7 +460,7 @@ async function main() {
   try {
     await util.assertECRRepo(ecrClient, ecrRepository);
   } catch (e) {
-    core.error(e.message + reRegisterHelperTxt(repoName, defaultBranch));
+    core.error(e.message + reRegisterHelperTxt(repoName));
     return process.exit(1);
   }
 

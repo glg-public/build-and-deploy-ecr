@@ -82,8 +82,8 @@ describe("lib.util.dockerLogin", () => {
     const execArgs = execStub.firstCall.args;
     expect(execArgs[0]).to.equal("docker");
     expect(execArgs[1][0]).to.equal("login");
-    expect(execArgs[1]).to.include(user);
-    expect(execArgs[1]).to.include(pass);
+    expect(execArgs[1].includesInOrder("--username", user)).to.be.true;
+    expect(execArgs[1].includesInOrder("--password", pass)).to.be.true;
     expect(execArgs[1].pop()).to.equal("someuri");
   });
 });
