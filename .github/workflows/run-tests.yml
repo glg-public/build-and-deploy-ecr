@@ -1,0 +1,16 @@
+name: Unit Tests
+
+on: [push]
+
+jobs:
+  install-and-test:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@master
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 16
+      - name: Install Dependencies
+        run: npm clean-install
+      - name: Run Unit Tests
+        run: npm test
