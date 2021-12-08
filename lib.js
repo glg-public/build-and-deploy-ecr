@@ -87,6 +87,7 @@ function httpGet(url, options = {}) {
 }
 
 const execFile = promisify(child_process.execFile);
+const exec = promisify(child_process.exec);
 
 function execWithLiveOutput(command, args, env) {
   return new Promise((resolve, reject) => {
@@ -110,6 +111,7 @@ function execWithLiveOutput(command, args, env) {
 const util = {
   httpGet,
   execFile,
+  exec,
   execWithLiveOutput,
   sleep,
   dockerLogin,
@@ -408,7 +410,8 @@ async function main() {
      * appease it, otherwise default to build args
      */
     if (/mount=type=ssh/.test(dockerfile)) {
-      await util.execFile("ssh-agent", ["-a", sshAuthSock]);
+      //await util.execFile("ssh-agent", ["-a", sshAuthSock]);
+      await util.exec(`eval $(ssh-agent -a ${sshAuthSock})`);
       const key = Buffer.from(inputs.githubSSHKey, "base64").toString("utf8");
       const keyFileName = "key";
       await fs.writeFile(keyFileName, key);
