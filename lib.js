@@ -169,11 +169,10 @@ async function runHealthcheck(imageName, inputs) {
       "If your container does not require a healthcheck (most jobs don't), then set healthcheck to a blank string."
     );
     core.startGroup("docker logs");
-    const { stdout: dockerLogsStdout } = await util.execFile("docker", [
-      "logs",
-      "test-container",
-    ]);
+    const { stdout: dockerLogsStdout, stderr: dockerLogsStderr } =
+      await util.execFile("docker", ["logs", "test-container"]);
     console.log(dockerLogsStdout);
+    console.log(dockerLogsStderr);
     core.endGroup();
     process.exit(1);
   }
