@@ -442,12 +442,14 @@ async function main() {
     dockerBuildArgs.push("--platform", inputs.platform, "--load");
   }
 
+  core.startGroup("docker build env");
   const buildEnv = {};
-  if (/^\s*(run|copy)\s+.*?<</i.test(dockerfile)) {
+  if (/^\s*(run|copy).*?<</i.test(dockerfile)) {
     core.info("Enabling Docker Buildkit");
     buildEnv["DOCKER_BUILDKIT"] = 1;
     buildEnv["BUILDKIT_PROGRESS"] = "plain";
   }
+  core.endGroup();
 
   // aws_account_id.dkr.ecr.region.amazonaws.com
   const region = inputs.ecrURI.split(".")[3];
