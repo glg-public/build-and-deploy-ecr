@@ -318,7 +318,7 @@ async function loginToAllRegistries(ecrClient, inputs, ecrRepository, sha) {
 function reRegisterHelperTxt(ghRepo) {
   return `
   Please re-register this github repository to get updated credentials:
-  
+
   glgroup ecr register-github-repo -r ${ghRepo}
   `;
 }
@@ -413,6 +413,10 @@ async function main() {
       const keyFileName = "key";
       await fs.writeFile(keyFileName, key);
       await util.execFile("ssh-add", [keyFileName]);
+      dockerBuildArgs.push(
+        "--ssh",
+        "default"
+      );
     } else {
       dockerBuildArgs.push(
         "--build-arg",
@@ -439,7 +443,7 @@ async function main() {
   }
 
   const buildEnv = {};
-  if (/^\s*run\s?<</i.test(dockerfile)) {
+  if (/^\s*(run|copy)\s+.*?<</i.test(dockerfile)) {
     buildEnv["DOCKER_BUILDKIT"] = 1;
     buildEnv["BUILDKIT_PROGRESS"] = "plain";
   }
