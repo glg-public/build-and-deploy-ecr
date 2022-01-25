@@ -251,7 +251,7 @@ describe("Main Workflow", () => {
   });
 
   it("looks for a RUN heredoc wth mount arguments and sets environment variables if present", async () => {
-    sandbox.stub(fs, "readFile").resolves("RUN --mount=ssh=default << some commands");
+    sandbox.stub(fs, "readFile").resolves("RUN --mount=type=ssh << some commands");
     const inputs = {
       dockerfile: "Dockerfile",
       ecrURI: "aws_account_id.dkr.ecr.region.amazonaws.com",

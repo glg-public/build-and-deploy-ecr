@@ -444,6 +444,7 @@ async function main() {
 
   const buildEnv = {};
   if (/^\s*(run|copy)\s+.*?<</i.test(dockerfile)) {
+    core.info("Enabling Docker Buildkit");
     buildEnv["DOCKER_BUILDKIT"] = 1;
     buildEnv["BUILDKIT_PROGRESS"] = "plain";
   }
