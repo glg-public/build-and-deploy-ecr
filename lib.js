@@ -317,7 +317,7 @@ async function loginToAllRegistries(ecrClient, inputs, ecrRepository, sha) {
 function reRegisterHelperTxt(ghRepo) {
   return `
   Please re-register this github repository to get updated credentials:
-  
+
   glgroup ecr register-github-repo -r ${ghRepo}
   `;
 }
@@ -406,12 +406,16 @@ async function main() {
      * If the dockerfile requests buildkit functionality,
      * appease it, otherwise default to build args
      */
-    if (/mount=type=ssh/.test(dockerfile)) {
+    if (/mount=type=ssh/m.test(dockerfile)) {
       await util.execFile("ssh-agent", ["-a", sshAuthSock]);
       const key = Buffer.from(inputs.githubSSHKey, "base64").toString("utf8");
       const keyFileName = "key";
       await fs.writeFile(keyFileName, key);
       await util.execFile("ssh-add", [keyFileName]);
+      dockerBuildArgs.push(
+        "--ssh",
+        "default"
+      );
     } else {
       dockerBuildArgs.push(
         "--build-arg",
@@ -437,11 +441,15 @@ async function main() {
     dockerBuildArgs.push("--platform", inputs.platform, "--load");
   }
 
+  core.startGroup("docker build env");
   const buildEnv = {};
-  if (/^\s*run\s?<</i.test(dockerfile)) {
+  if (/^\s*(run|copy).*?<</im.test(dockerfile)) {
+    core.info("Enabling Docker Buildkit");
     buildEnv["DOCKER_BUILDKIT"] = 1;
     buildEnv["BUILDKIT_PROGRESS"] = "plain";
   }
+  console.log(buildEnv);
+  core.endGroup();
 
   // aws_account_id.dkr.ecr.region.amazonaws.com
   const region = inputs.ecrURI.split(".")[3];

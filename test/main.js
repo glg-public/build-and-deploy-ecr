@@ -250,6 +250,57 @@ describe("Main Workflow", () => {
     });
   });
 
+  it("looks for a RUN heredoc wth mount arguments and sets environment variables if present", async () => {
+    sandbox.stub(fs, "readFile").resolves("RUN --mount=type=ssh <<EOF");
+    const inputs = {
+      dockerfile: "Dockerfile",
+      ecrURI: "aws_account_id.dkr.ecr.region.amazonaws.com",
+      platform: "arm64",
+    };
+    inputStub.returns(inputs);
+
+    await lib.main();
+
+    const buildEnv = buildStub.getCall(0).args[1];
+    expect(buildEnv).to.deep.equal({
+      DOCKER_BUILDKIT: 1,
+      BUILDKIT_PROGRESS: "plain",
+    });
+  });
+
+  it("looks for a COPY heredoc and sets environment variables if present", async () => {
+    sandbox.stub(fs, "readFile").resolves("COPY << some commands");
+    const inputs = {
+      dockerfile: "Dockerfile",
+      ecrURI: "aws_account_id.dkr.ecr.region.amazonaws.com",
+      platform: "arm64",
+    };
+    inputStub.returns(inputs);
+
+    await lib.main();
+
+    const buildEnv = buildStub.getCall(0).args[1];
+    expect(buildEnv).to.deep.equal({
+      DOCKER_BUILDKIT: 1,
+      BUILDKIT_PROGRESS: "plain",
+    });
+  });
+
+  it("looks for a heredoc and does not set environment variables if missing", async () => {
+    sandbox.stub(fs, "readFile").resolves("RUN some commands");
+    const inputs = {
+      dockerfile: "Dockerfile",
+      ecrURI: "aws_account_id.dkr.ecr.region.amazonaws.com",
+      platform: "arm64",
+    };
+    inputStub.returns(inputs);
+
+    await lib.main();
+
+    const buildEnv = buildStub.getCall(0).args[1];
+    expect(buildEnv).to.deep.equal({});
+  });
+
   it("asserts that the ecr repo exists", async () => {
     sandbox.stub(fs, "readFile").resolves("");
     const inputs = {
