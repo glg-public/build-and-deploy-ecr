@@ -412,6 +412,7 @@ async function main() {
       const key = Buffer.from(inputs.githubSSHKey, "base64").toString("utf8");
       const keyFileName = "key";
       await fs.writeFile(keyFileName, key);
+      await fs.chmod(keyFileName, "0644");
       await util.execFile("ssh-add", [keyFileName], { env: { "SSH_AUTH_SOCK": sshAuthSock }});
       dockerBuildArgs.push(
         "--ssh",
