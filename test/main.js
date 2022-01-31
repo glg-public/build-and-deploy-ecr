@@ -139,10 +139,12 @@ describe("Main Workflow", () => {
       ecrURI: "aws_account_id.dkr.ecr.region.amazonaws.com",
     };
     inputStub.returns(inputs);
+    const chmodStub = sandbox.stub(fs, "chmod").resolves();
 
     await lib.main();
 
     expect(writeFileStub.firstCall.args[1]).to.equal("abcdefgh");
+    expect(chmodStub.firstCall.args[1]).to.equal("0600");
 
     const buildArgs = buildStub.getCall(0).args[0];
     expect(
@@ -265,6 +267,7 @@ describe("Main Workflow", () => {
     expect(buildEnv).to.deep.equal({
       DOCKER_BUILDKIT: 1,
       BUILDKIT_PROGRESS: "plain",
+      SSH_AUTH_SOCK: "/tmp/ssh_agent.sock"
     });
   });
 
