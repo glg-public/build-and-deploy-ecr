@@ -451,6 +451,9 @@ async function main() {
     buildEnv["DOCKER_BUILDKIT"] = 1;
     buildEnv["BUILDKIT_PROGRESS"] = "plain";
   }
+  if (/mount=type=ssh/m.test(dockerfile)) {
+    buildEnv["SSH_AUTH_SOCK"] = sshAuthSock;
+  }
   console.log(buildEnv);
   core.endGroup();
 
