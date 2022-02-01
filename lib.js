@@ -401,6 +401,7 @@ async function main() {
   const sshAuthSock = "/tmp/ssh_agent.sock";
 
   // Only include the GITHUB_SSH_KEY if it exists
+  core.startGroup("docker ssh setup");
   if (inputs.githubSSHKey) {
     /**
      * If the dockerfile requests buildkit functionality,
@@ -411,7 +412,8 @@ async function main() {
       const key = Buffer.from(inputs.githubSSHKey, "base64").toString("utf8");
       const keyFileName = "key";
       await fs.writeFile(keyFileName, key);
-      await util.execFile("ssh-add", [keyFileName]);
+      await fs.chmod(keyFileName, "0600");
+      await util.execFile("ssh-add", [keyFileName], { env: { "SSH_AUTH_SOCK": sshAuthSock }});
       dockerBuildArgs.push(
         "--ssh",
         "default"
@@ -423,6 +425,7 @@ async function main() {
       );
     }
   }
+  core.endGroup();
 
   // Only include the GITHUB_SHA if it is used
   if (/GITHUB_SHA/.test(dockerfile)) {
@@ -447,6 +450,9 @@ async function main() {
     core.info("Enabling Docker Buildkit");
     buildEnv["DOCKER_BUILDKIT"] = 1;
     buildEnv["BUILDKIT_PROGRESS"] = "plain";
+  }
+  if (/mount=type=ssh/m.test(dockerfile)) {
+    buildEnv["SSH_AUTH_SOCK"] = sshAuthSock;
   }
   console.log(buildEnv);
   core.endGroup();
