@@ -27,6 +27,7 @@ function getInputs() {
   const dockerfile = core.getInput("dockerfile");
   const envFile = core.getInput("env_file");
   const githubSSHKey = core.getInput("github_ssh_key");
+  const unitTest = core.getInput("unit_test");
   const healthcheck = core.getInput("healthcheck");
   const platform = core.getInput("platform");
   const port = core.getInput("port");
@@ -42,6 +43,7 @@ function getInputs() {
     dockerfile,
     envFile,
     githubSSHKey,
+    unitTest,
     healthcheck,
     platform,
     port,
@@ -115,10 +117,68 @@ const util = {
   dockerLogin,
   assertECRRepo,
   dockerBuild,
+  runUnitTest,
   runHealthcheck,
   loginToAllRegistries,
   getInputs,
 };
+
+async function runUnitTest(imageName, inputs) {
+  const args = ["run", "--name", "test-container"]
+  
+  if (inputs.envFile) {
+    args.push("--env-file", inputs.envFile)
+  }
+
+  const timeout = ms => {
+    let timer
+    const promise = new Promise(async (resolve, reject) => {
+      async function writeLogs() {
+        core.startGroup("docker logs")
+        const { stdout: dockerLogsStdout, stderr: dockerLogsStderr } = await util.execFile("docker", [
+          "logs",
+          "test-container"
+        ])
+        console.log(dockerLogsStdout)
+        console.log(dockerLogsStderr)
+        const { stdout } = await util.execFile("docker", ["stop", "test-container"])
+        
+        console.log(`${stdout} stopped.`)
+        core.endGroup()
+        resolve()
+      }
+
+      timer = setTimeout(() => {
+        core.error("Container did not pass tests after 30 minutes")
+        writeLogs().catch(reject)
+      }, ms) // timeout if tests didn't complete in 30 minutes
+    })
+    
+    return { promise, cancel: () => clearTimeout(timer) }
+  }
+
+  const timeoutObj = timeout(1000 * 60 * 60 * 30)
+  timeoutObj.promise
+    .then(() => {
+      process.exit(1)
+    })
+    .catch(() => {
+      process.exit(1)
+    })
+
+  const { stdout: dockerRunStdout, stderr: dockerRunStderr } = await util.execFile("docker", [
+    ...args,
+    imageName,
+    inputs.unitTest
+  ])
+  timeoutObj.cancel()
+  console.log(dockerRunStdout)
+  console.log(dockerRunStderr)
+
+  if (!dockerRunStdout || dockerRunStderr) process.exit(1)
+
+  console.log("unit test passed")
+}
 
 async function runHealthcheck(imageName, inputs) {
   const args = [
@@ -507,6 +567,15 @@ async function main() {
   core.endGroup();
 
   /**
+   * Run Unit Tests
+   */
+  if (inputs.unitTest) {
+    await util.runUnitTest(containerImageSha, inputs)
+  } else {
+    core.warning("Not running unit tests")
+  }
+
+  /**
    * Healthcheck
    */
   if (inputs.healthcheck) {
@@ -537,6 +606,7 @@ async function main() {
 module.exports = {
   main,
   util,
+  runUnitTest,
   runHealthcheck,
   dockerBuild,
   assertECRRepo,

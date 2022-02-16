@@ -29,12 +29,16 @@ inputs:
     required: true
   env_file:
     default: ""
-    description: File containing environment variables required for app to run and pass healthcheck
+    description: File containing environment variables required for app to run and pass healthcheck or unit tests
     required: false
   github_ssh_key:
     description: SSH Private Key with access to any private repos you need
     required: false
     default: ""
+  unit_test:
+    description: Command to run in order to execute unit tests. Failing tests will prevent deployment.
+    required: false
+    default: ''
   healthcheck:
     description: healthcheck path, like /healthcheck
     required: false
