@@ -29,15 +29,21 @@ describe("lib.runUnitTest", () => {
   after(() => {
     sandbox.restore();
   });
-
-  it("executes the provided unit_test command against the docker image", async () => {
-    const inputs = { ...defaultInputs };
-    await lib.runUnitTest(imageName, inputs);
-
-    const dockerRunArgs = execStub.getCall(0).args[1];
-
-    expect(dockerRunArgs.includesInOrder("myimage:latest", "npm test")).to.be.true;
-  });
+  
+  const commonArgs = ["run", "--name", "test-container"]
+  const inputs = [
+    [{ ...defaultInputs }, [...commonArgs, "myimage:latest", "npm", "test"]],
+    [{ ...defaultInputs, unitTest: "foo 'bar' test" }, [...commonArgs, "myimage:latest", "foo", "'bar'", "test"]],
+    [{ ...defaultInputs, unitTest: "npm run --foo" }, [...commonArgs, "myimage:latest", "npm", "run", "--foo"]],
+    [{ ...defaultInputs, unitTest: "npm run --foo '{\"foo\":123}'" }, [...commonArgs, "myimage:latest", "npm", "run", "--foo", "'{\"foo\":123}'"]],
+  ]
+  inputs.forEach(([input, expectedOutput]) => {
+    it(`executes the provided unit_test command of ${input.unitTest} against the docker image`, async () => {  
+        await lib.runUnitTest(imageName, input);
+        const dockerRunArgs = execStub.getCall(0).args[1];
+        expect(dockerRunArgs).to.include.ordered.members(expectedOutput);
+    })
+  })
 
   it("adds an env file if specified in inputs", async () => {
     const inputs = {

@@ -169,7 +169,7 @@ async function runUnitTest(imageName, inputs) {
   const { stdout: dockerRunStdout, stderr: dockerRunStderr } = await util.execFile("docker", [
     ...args,
     imageName,
-    inputs.unitTest
+    ...inputs.unitTest.match(/"[^"]+"|'[^']+'|\S+/g)
   ])
   timeoutObj.cancel()
   console.log(dockerRunStdout)
