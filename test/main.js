@@ -162,7 +162,7 @@ describe("Main Workflow", () => {
   });
 
   it("injects an .npmrc if secret mount is requested with id=npmrc", async () => {
-    sandbox.stub(fs, "readFile").resolves("--mount=type=secret,id=npmrc,target=/app/.npmrc");
+    sandbox.stub(fs, "readFile").resolves("RUN --mount=type=secret,id=npmrc,target=/app/.npmrc <<EOF");
     const inputs = {
       dockerfile: "Dockerfile",
       // githubSSHKey: Buffer.from("abcdefgh", "utf8").toString("base64"),
@@ -180,7 +180,7 @@ describe("Main Workflow", () => {
     expect(
       buildArgs.includesInOrder(
         "--secret",
-        "id=npmrc,src=/tmp/.npmrc"
+        "id=npmrc,src=.npmrc"
       )
     ).to.be.true;
   });

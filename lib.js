@@ -431,11 +431,13 @@ async function main() {
   // is steup to use it.
   core.startGroup("docker secrets setup for github npm registry");
   if (/mount=type=secret,id=npmrc/m.test(dockerfile)) {
+    console.log("npm registry secret requested, injecting");
     const npmrc = `@glg:registry=https://npm.pkg.github.com\nnpm.pkg.github.com/:_authToken=${github.token}`
-    await fs.writeFile("/tmp/.nmprc", npmrc);
+    console.log(npmrc);
+    await fs.writeFile(".nmprc", npmrc);
     dockerBuildArgs.push(
       "--secret",
-      "id=npmrc,src=/tmp/.npmrc"
+      "id=npmrc,src=.npmrc"
     );
   }
   core.endGroup();
@@ -468,6 +470,7 @@ async function main() {
     buildEnv["SSH_AUTH_SOCK"] = sshAuthSock;
   }
   console.log(buildEnv);
+  console.log(dockerBuildArgs);
   core.endGroup();
 
   // aws_account_id.dkr.ecr.region.amazonaws.com
