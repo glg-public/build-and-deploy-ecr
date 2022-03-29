@@ -427,6 +427,19 @@ async function main() {
   }
   core.endGroup();
 
+  // Setup an npmrc to provide access to github's npm registry if the dockerfile
+  // is steup to use it.
+  core.startGroup("docker secrets setup for github npm registry");
+  if (/mount=type=secret,id=npmrc/m.test(dockerfile)) {
+    const npmrc = `@glg:registry=https://npm.pkg.github.com\nnpm.pkg.github.com/:_authToken=${github.token}`
+    await fs.writeFile("/tmp/.nmprc", npmrc);
+    dockerBuildArgs.push(
+      "--secret",
+      "id=npmrc,src=/tmp/.npmrc"
+    );
+  }
+  core.endGroup();
+
   // Only include the GITHUB_SHA if it is used
   if (/GITHUB_SHA/.test(dockerfile)) {
     dockerBuildArgs.push("--build-arg", `GITHUB_SHA=${sha}`);
