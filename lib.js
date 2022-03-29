@@ -437,7 +437,6 @@ async function main() {
       console.log("npm registry secret requested, injecting");
       const npmrc = `@glg:registry=https://npm.pkg.github.com\n//npm.pkg.github.com/:_authToken=${inputs.githubPackagesToken}`
       const npmrcFileName = "npmrc"
-      console.log(npmrc);
       await fs.writeFile(npmrcFileName, npmrc);
       dockerBuildArgs.push(
         "--secret",
