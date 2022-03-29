@@ -43,6 +43,7 @@ function getInputs() {
     dockerfile,
     envFile,
     githubSSHKey,
+    githubPackagesToken,
     healthcheck,
     platform,
     port,
@@ -431,16 +432,18 @@ async function main() {
   // Setup an npmrc to provide access to github's npm registry if the dockerfile
   // is steup to use it.
   core.startGroup("docker secrets setup for github npm registry");
-  if (/mount=type=secret,id=npmrc/m.test(dockerfile)) {
-    console.log("npm registry secret requested, injecting");
-    const npmrc = `@glg:registry=https://npm.pkg.github.com\n//npm.pkg.github.com/:_authToken=${inputs.githubPackagesToken}`
-    const npmrcFileName = "npmrc"
-    console.log(npmrc);
-    await fs.writeFile(npmrcFileName, npmrc);
-    dockerBuildArgs.push(
-      "--secret",
-      `id=npmrc,src=${npmrcFileName}`
-    );
+  if (inputs.githubPackagesToken) {
+    if (/mount=type=secret,id=npmrc/m.test(dockerfile)) {
+      console.log("npm registry secret requested, injecting");
+      const npmrc = `@glg:registry=https://npm.pkg.github.com\n//npm.pkg.github.com/:_authToken=${inputs.githubPackagesToken}`
+      const npmrcFileName = "npmrc"
+      console.log(npmrc);
+      await fs.writeFile(npmrcFileName, npmrc);
+      dockerBuildArgs.push(
+        "--secret",
+        `id=npmrc,src=${npmrcFileName}`
+      );
+    }
   }
   core.endGroup();
 
