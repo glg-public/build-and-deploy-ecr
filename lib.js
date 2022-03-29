@@ -432,12 +432,13 @@ async function main() {
   core.startGroup("docker secrets setup for github npm registry");
   if (/mount=type=secret,id=npmrc/m.test(dockerfile)) {
     console.log("npm registry secret requested, injecting");
-    const npmrc = `@glg:registry=https://npm.pkg.github.com\nnpm.pkg.github.com/:_authToken=${github.token}`
+    const npmrc = `@glg:registry=https://npm.pkg.github.com\n//npm.pkg.github.com/:_authToken=${github.token}`
+    const npmrcFileName = "npmrc"
     console.log(npmrc);
-    await fs.writeFile(".nmprc", npmrc);
+    await fs.writeFile(npmrcFileName, npmrc);
     dockerBuildArgs.push(
       "--secret",
-      "id=npmrc,src=.npmrc"
+      `id=npmrc,src=${npmrcFileName}`
     );
   }
   core.endGroup();

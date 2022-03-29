@@ -173,14 +173,14 @@ describe("Main Workflow", () => {
 
     await lib.main();
 
-    expect(writeFileStub.firstCall.args[1]).to.equal("@glg:registry=https://npm.pkg.github.com\nnpm.pkg.github.com/:_authToken=undefined");
+    expect(writeFileStub.firstCall.args[1]).to.equal("@glg:registry=https://npm.pkg.github.com\n//npm.pkg.github.com/:_authToken=undefined");
     // expect(chmodStub.firstCall.args[1]).to.equal("0600");
 
     const buildArgs = buildStub.getCall(0).args[0];
     expect(
       buildArgs.includesInOrder(
         "--secret",
-        "id=npmrc,src=.npmrc"
+        "id=npmrc,src=npmrc"
       )
     ).to.be.true;
   });
