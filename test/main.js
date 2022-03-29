@@ -169,12 +169,10 @@ describe("Main Workflow", () => {
       ecrURI: "aws_account_id.dkr.ecr.region.amazonaws.com",
     };
     inputStub.returns(inputs);
-    // const chmodStub = sandbox.stub(fs, "chmod").resolves();
 
     await lib.main();
 
     expect(writeFileStub.firstCall.args[1]).to.equal(`@glg:registry=https://npm.pkg.github.com\n//npm.pkg.github.com/:_authToken=${inputs.githubPackagesToken}`);
-    // expect(chmodStub.firstCall.args[1]).to.equal("0600");
 
     const buildArgs = buildStub.getCall(0).args[0];
     expect(
