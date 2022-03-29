@@ -165,7 +165,7 @@ describe("Main Workflow", () => {
     sandbox.stub(fs, "readFile").resolves("RUN --mount=type=secret,id=npmrc,target=/app/.npmrc <<EOF");
     const inputs = {
       dockerfile: "Dockerfile",
-      // githubSSHKey: Buffer.from("abcdefgh", "utf8").toString("base64"),
+      githubPackagesToken: Buffer.from("abcdefgh", "utf8").toString("base64"),
       ecrURI: "aws_account_id.dkr.ecr.region.amazonaws.com",
     };
     inputStub.returns(inputs);
@@ -173,7 +173,7 @@ describe("Main Workflow", () => {
 
     await lib.main();
 
-    expect(writeFileStub.firstCall.args[1]).to.equal("@glg:registry=https://npm.pkg.github.com\n//npm.pkg.github.com/:_authToken=undefined");
+    expect(writeFileStub.firstCall.args[1]).to.equal(`@glg:registry=https://npm.pkg.github.com\n//npm.pkg.github.com/:_authToken=${inputs.githubPackagesToken}`);
     // expect(chmodStub.firstCall.args[1]).to.equal("0600");
 
     const buildArgs = buildStub.getCall(0).args[0];

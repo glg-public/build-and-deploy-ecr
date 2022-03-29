@@ -27,6 +27,7 @@ function getInputs() {
   const dockerfile = core.getInput("dockerfile");
   const envFile = core.getInput("env_file");
   const githubSSHKey = core.getInput("github_ssh_key");
+  const githubPackagesToken = core.getInput("github_packages_token");
   const healthcheck = core.getInput("healthcheck");
   const platform = core.getInput("platform");
   const port = core.getInput("port");
@@ -432,7 +433,7 @@ async function main() {
   core.startGroup("docker secrets setup for github npm registry");
   if (/mount=type=secret,id=npmrc/m.test(dockerfile)) {
     console.log("npm registry secret requested, injecting");
-    const npmrc = `@glg:registry=https://npm.pkg.github.com\n//npm.pkg.github.com/:_authToken=${github.token}`
+    const npmrc = `@glg:registry=https://npm.pkg.github.com\n//npm.pkg.github.com/:_authToken=${inputs.githubPackagesToken}`
     const npmrcFileName = "npmrc"
     console.log(npmrc);
     await fs.writeFile(npmrcFileName, npmrc);
