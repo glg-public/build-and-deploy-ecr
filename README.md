@@ -29,6 +29,7 @@ This action requires certain things to be configured in your repo:
 | ecr_uri | The URI of the ECR repository to push to | **REQUIRED** |
 | env_file | File containing environment variables required for app to run and pass healthcheck | `""` |
 | github_ssh_key | An SSH Private Key with access to any private repos you need | `""` |
+| github_packages_token | A Github token wih read access to the github npm package registry | `""` |
 | healthcheck | A healthcheck path, like /healthcheck | `/healthcheck` |
 | port | The port the server listens on | `3000` |
 | secret_access_key | An AWS Secret Access Key | **REQUIRED** |

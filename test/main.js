@@ -153,6 +153,34 @@ describe("Main Workflow", () => {
         `GITHUB_SSH_KEY=${inputs.githubSSHKey}`
       )
     ).to.be.false;
+    expect(
+      buildArgs.includesInOrder(
+        "--ssh",
+        "default"
+      )
+    ).to.be.true;
+  });
+
+  it("injects an .npmrc if secret mount is requested with id=npmrc", async () => {
+    sandbox.stub(fs, "readFile").resolves("RUN --mount=type=secret,id=npmrc,target=/app/.npmrc <<EOF");
+    const inputs = {
+      dockerfile: "Dockerfile",
+      githubPackagesToken: "ghp_ABCDE",
+      ecrURI: "aws_account_id.dkr.ecr.region.amazonaws.com",
+    };
+    inputStub.returns(inputs);
+
+    await lib.main();
+
+    expect(writeFileStub.firstCall.args[1]).to.equal(`@glg:registry=https://npm.pkg.github.com\n//npm.pkg.github.com/:_authToken=${inputs.githubPackagesToken}`);
+
+    const buildArgs = buildStub.getCall(0).args[0];
+    expect(
+      buildArgs.includesInOrder(
+        "--secret",
+        "id=npmrc,src=npmrc"
+      )
+    ).to.be.true;
   });
 
   it("passes the git sha as a build arg only if used in the dockerfile", async () => {

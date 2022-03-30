@@ -27,6 +27,7 @@ function getInputs() {
   const dockerfile = core.getInput("dockerfile");
   const envFile = core.getInput("env_file");
   const githubSSHKey = core.getInput("github_ssh_key");
+  const githubPackagesToken = core.getInput("github_packages_token");
   const healthcheck = core.getInput("healthcheck");
   const platform = core.getInput("platform");
   const port = core.getInput("port");
@@ -42,6 +43,7 @@ function getInputs() {
     dockerfile,
     envFile,
     githubSSHKey,
+    githubPackagesToken,
     healthcheck,
     platform,
     port,
@@ -427,6 +429,23 @@ async function main() {
   }
   core.endGroup();
 
+  // Setup an npmrc to provide access to github's npm registry if the dockerfile
+  // is steup to use it.
+  core.startGroup("docker secrets setup for github npm registry");
+  if (inputs.githubPackagesToken) {
+    if (/mount=type=secret,id=npmrc/m.test(dockerfile)) {
+      console.log("npm registry secret requested, injecting");
+      const npmrc = `@glg:registry=https://npm.pkg.github.com\n//npm.pkg.github.com/:_authToken=${inputs.githubPackagesToken}`
+      const npmrcFileName = "npmrc"
+      await fs.writeFile(npmrcFileName, npmrc);
+      dockerBuildArgs.push(
+        "--secret",
+        `id=npmrc,src=${npmrcFileName}`
+      );
+    }
+  }
+  core.endGroup();
+
   // Only include the GITHUB_SHA if it is used
   if (/GITHUB_SHA/.test(dockerfile)) {
     dockerBuildArgs.push("--build-arg", `GITHUB_SHA=${sha}`);
@@ -455,6 +474,7 @@ async function main() {
     buildEnv["SSH_AUTH_SOCK"] = sshAuthSock;
   }
   console.log(buildEnv);
+  console.log(dockerBuildArgs);
   core.endGroup();
 
   // aws_account_id.dkr.ecr.region.amazonaws.com

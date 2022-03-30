@@ -35,6 +35,10 @@ inputs:
     description: SSH Private Key with access to any private repos you need
     required: false
     default: ""
+  github_packages_token:
+    description: Github token with permissions to read from the github packages registry
+    required: false
+    default: ""
   healthcheck:
     description: healthcheck path, like /healthcheck
     required: false
