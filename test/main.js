@@ -165,7 +165,7 @@ describe("Main Workflow", () => {
     sandbox.stub(fs, "readFile").resolves("RUN --mount=type=secret,id=npmrc,target=/app/.npmrc <<EOF");
     const inputs = {
       dockerfile: "Dockerfile",
-      githubPackagesToken: Buffer.from("abcdefgh", "utf8").toString("base64"),
+      githubPackagesToken: "ghp_ABCDE",
       ecrURI: "aws_account_id.dkr.ecr.region.amazonaws.com",
     };
     inputStub.returns(inputs);
