@@ -183,6 +183,30 @@ describe("Main Workflow", () => {
     ).to.be.true;
   });
 
+  it("injects a secret mount if requested with secrets file", async () => {
+    sandbox.stub(fs, "readFile").resolves("RUN --mount=type=secret,id=secrets <<EOF");
+
+    const inputs = {
+      dockerfile: "Dockerfile",
+      secrets_file: "secrets.env",
+      githubSSHKey: "abcdefgh",
+      ecrURI: "aws_account_id.dkr.ecr.region.amazonaws.com",
+    };
+
+    inputStub.returns(inputs);
+
+    await lib.main();
+
+    const buildArgs = buildStub.getCall(0).args[0];
+    expect(
+      buildArgs.includesInOrder(
+        "--secret",
+        "id=secrets,src=secrets.env"
+      )
+    ).to.be.true;
+  });
+
+
   it("passes the git sha as a build arg only if used in the dockerfile", async () => {
     const readStub = sandbox.stub(fs, "readFile").resolves("GITHUB_SHA");
     const inputs = {

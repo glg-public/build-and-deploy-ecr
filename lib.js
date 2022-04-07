@@ -32,6 +32,7 @@ function getInputs() {
   const platform = core.getInput("platform");
   const port = core.getInput("port");
   const registries = core.getInput("registries");
+  const secretsFile = core.getInput("secrets_file");
   return {
     accessKeyId,
     secretAccessKey,
@@ -442,6 +443,20 @@ async function main() {
         "--secret",
         `id=npmrc,src=${npmrcFileName}`
       );
+    }
+  }
+  core.endGroup();
+
+  core.startGroup("docker secrets setup for secrets file");
+  if (inputs.secrets_file) {
+    if (/mount=type=secret,id=secrets/m.test(dockerfile)) {
+      console.log("injecting secrets file into docker build")
+      dockerBuildArgs.push(
+        "--secret",
+        `id=secrets,src=${inputs.secrets_file}`
+      )
+    } else {
+      console.error("did not detect secrets mount in docker file")
     }
   }
   core.endGroup();
