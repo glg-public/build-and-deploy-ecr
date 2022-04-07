@@ -49,6 +49,7 @@ function getInputs() {
     platform,
     port,
     registries,
+    secretsFile,
   };
 }
 
@@ -149,6 +150,7 @@ async function runHealthcheck(imageName, inputs) {
   ]);
   console.log(dockerRunStdout);
 
+  core.startGroup("Healthchecks");
   let attemptCount = 0;
   const maxAttempts = 5;
   const healthcheckURL = `http://localhost:${inputs.port}${inputs.healthcheck}`;
@@ -181,6 +183,8 @@ async function runHealthcheck(imageName, inputs) {
   }
 
   console.log("Healthcheck Passed!");
+
+  core.endGroup();
   const { stdout } = await util.execFile("docker", ["stop", "test-container"]);
   console.log(`${stdout} stopped.`);
 }
@@ -448,12 +452,12 @@ async function main() {
   core.endGroup();
 
   core.startGroup("docker secrets setup for secrets file");
-  if (inputs.secrets_file) {
-    if (/mount=type=secret,id=secrets/m.test(dockerfile)) {
+  if (inputs.secretsFile) {
+    if (/mount=type=secret,id=secrets/.test(dockerfile)) {
       console.log("injecting secrets file into docker build")
       dockerBuildArgs.push(
         "--secret",
-        `id=secrets,src=${inputs.secrets_file}`
+        `id=secrets,src=${inputs.secretsFile}`
       )
     } else {
       console.error("did not detect secrets mount in docker file")
