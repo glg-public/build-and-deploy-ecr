@@ -453,7 +453,7 @@ async function main() {
 
   core.startGroup("docker secrets setup for secrets file");
   if (inputs.secretsFile) {
-    if (/mount=type=secret,id=secrets/.test(dockerfile)) {
+    if (/mount=type=secret,id=secrets/m.test(dockerfile)) {
       console.log("injecting secrets file into docker build")
       dockerBuildArgs.push(
         "--secret",

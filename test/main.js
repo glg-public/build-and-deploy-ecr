@@ -188,7 +188,7 @@ describe("Main Workflow", () => {
 
     const inputs = {
       dockerfile: "Dockerfile",
-      secrets_file: "secrets.env",
+      secretsFile: "secrets.env",
       githubSSHKey: "abcdefgh",
       ecrURI: "aws_account_id.dkr.ecr.region.amazonaws.com",
     };
