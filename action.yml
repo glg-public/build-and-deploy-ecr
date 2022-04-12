@@ -59,7 +59,7 @@ inputs:
     description: AWS Secret Access Key
     required: true
   secrets_file:
-    description: Path to an env file to be mounted as a secret
+    description: Path to an env file to be mounted as a secret during the build phase of your container
     required: false
 
 outputs:
