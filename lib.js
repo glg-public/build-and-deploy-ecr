@@ -32,7 +32,7 @@ function getInputs() {
   const platform = core.getInput("platform");
   const port = core.getInput("port");
   const registries = core.getInput("registries");
-  const useBuildKit = core.getInput("buildkit");
+  const useBuildKit = core.getBooleanInput("buildkit");
   return {
     accessKeyId,
     secretAccessKey,
