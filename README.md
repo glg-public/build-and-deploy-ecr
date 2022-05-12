@@ -33,6 +33,7 @@ This action requires certain things to be configured in your repo:
 | healthcheck | A healthcheck path, like /healthcheck | `/healthcheck` |
 | port | The port the server listens on | `3000` |
 | secret_access_key | An AWS Secret Access Key | **REQUIRED** |
+| buildkit | Whether to use docker buildkit | `"true"` |
 
 ### Config Notes
 
