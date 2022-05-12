@@ -58,6 +58,10 @@ inputs:
   secret_access_key:
     description: AWS Secret Access Key
     required: true
+  buildkit:
+    description: Use Docker Buildkit
+    required: false
+    default: "true"
 
 outputs:
   container-path:
