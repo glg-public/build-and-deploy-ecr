@@ -16,6 +16,10 @@ inputs:
     description: File used during build (usually in postinstall) to install your app
     required: false
     default: ""
+  buildkit:
+    description: Use Docker Buildkit
+    required: false
+    default: "true"
   deploy:
     description: Whether to push the image to ECR after building it
     required: false
@@ -61,6 +65,7 @@ inputs:
   secrets_file:
     description: Path to an env file to be mounted as a secret during the build phase of your container
     required: false
+
 
 outputs:
   container-path:

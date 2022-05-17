@@ -33,6 +33,8 @@ function getInputs() {
   const port = core.getInput("port");
   const registries = core.getInput("registries");
   const secretsFile = core.getInput("secrets_file");
+  const useBuildKit = core.getBooleanInput("buildkit");
+
   return {
     accessKeyId,
     secretAccessKey,
@@ -50,6 +52,7 @@ function getInputs() {
     port,
     registries,
     secretsFile,
+    useBuildKit
   };
 }
 
@@ -485,6 +488,9 @@ async function main() {
   core.startGroup("docker build env");
   const buildEnv = {};
   if (/^\s*(run|copy).*?<</im.test(dockerfile)) {
+    inputs.useBuildKit = true
+  }
+  if (inputs.useBuildKit) {
     core.info("Enabling Docker Buildkit");
     buildEnv["DOCKER_BUILDKIT"] = 1;
     buildEnv["BUILDKIT_PROGRESS"] = "plain";
