@@ -32,7 +32,9 @@ function getInputs() {
   const platform = core.getInput("platform");
   const port = core.getInput("port");
   const registries = core.getInput("registries");
+  const secretsFile = core.getInput("secrets_file");
   const useBuildKit = core.getBooleanInput("buildkit");
+
   return {
     accessKeyId,
     secretAccessKey,
@@ -49,6 +51,7 @@ function getInputs() {
     platform,
     port,
     registries,
+    secretsFile,
     useBuildKit
   };
 }
@@ -150,6 +153,7 @@ async function runHealthcheck(imageName, inputs) {
   ]);
   console.log(dockerRunStdout);
 
+  core.startGroup("Healthchecks");
   let attemptCount = 0;
   const maxAttempts = 5;
   const healthcheckURL = `http://localhost:${inputs.port}${inputs.healthcheck}`;
@@ -182,6 +186,8 @@ async function runHealthcheck(imageName, inputs) {
   }
 
   console.log("Healthcheck Passed!");
+
+  core.endGroup();
   const { stdout } = await util.execFile("docker", ["stop", "test-container"]);
   console.log(`${stdout} stopped.`);
 }
@@ -444,6 +450,20 @@ async function main() {
         "--secret",
         `id=npmrc,src=${npmrcFileName}`
       );
+    }
+  }
+  core.endGroup();
+
+  core.startGroup("docker secrets setup for secrets file");
+  if (inputs.secretsFile) {
+    if (/mount=type=secret,id=secrets/m.test(dockerfile)) {
+      console.log("injecting secrets file into docker build")
+      dockerBuildArgs.push(
+        "--secret",
+        `id=secrets,src=${inputs.secretsFile}`
+      )
+    } else {
+      console.error("did not detect secrets mount in docker file")
     }
   }
   core.endGroup();
