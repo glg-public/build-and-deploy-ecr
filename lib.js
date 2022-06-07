@@ -25,7 +25,7 @@ function getInputs() {
   const buildArgs = core.getInput("build-args");
   const buildConfig = core.getInput("build_config");
   const deploy = core.getBooleanInput("deploy");
-  const dockerfile = core.getInput("dockerfile");
+  let dockerfile = core.getInput("dockerfile");
   let envFile = core.getInput("env_file");
   const githubSSHKey = core.getInput("github_ssh_key");
   const githubPackagesToken = core.getInput("github_packages_token");
@@ -33,12 +33,23 @@ function getInputs() {
   const platform = core.getInput("platform");
   const port = core.getInput("port");
   const registries = core.getInput("registries");
-  const secretsFile = core.getInput("secrets_file");
+  let secretsFile = core.getInput("secrets_file");
   const useBuildKit = core.getBooleanInput("buildkit");
   const workDir = core.getInput("working_directory");
 
+  /**
+   * We assume any files specified are going to be relative to working_directory
+   */
   if (envFile && workDir) {
     envFile = path.join(workDir, envFile);
+  }
+
+  if (dockerfile && workDir) {
+    dockerfile = path.join(workDir, dockerfile);
+  }
+
+  if (secretsFile && workDir) {
+    secretsFile = path.join(workDir, secretsFile);
   }
 
   return {
@@ -378,10 +389,7 @@ async function main() {
    */
   let dockerfile;
   try {
-    dockerfile = await fs.readFile(
-      path.join(inputs.workDir, inputs.dockerfile),
-      "utf8"
-    );
+    dockerfile = await fs.readFile(inputs.dockerfile, "utf8");
   } catch (e) {
     core.error(e);
     return process.exit(2);
