@@ -13,6 +13,7 @@ const {
 } = require("@aws-sdk/client-ecr");
 
 const fs = require("fs").promises;
+const path = require("path");
 
 function getInputs() {
   const accessKeyId = core.getInput("access_key_id", { required: true });
@@ -373,7 +374,10 @@ async function main() {
    */
   let dockerfile;
   try {
-    dockerfile = await fs.readFile(inputs.dockerfile, "utf8");
+    dockerfile = await fs.readFile(
+      path.join(inputs.workDir, inputs.dockerfile),
+      "utf8"
+    );
   } catch (e) {
     core.error(e);
     return process.exit(2);
