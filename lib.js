@@ -34,6 +34,7 @@ function getInputs() {
   const registries = core.getInput("registries");
   const secretsFile = core.getInput("secrets_file");
   const useBuildKit = core.getBooleanInput("buildkit");
+  const workDir = core.getInput("working_directory");
 
   return {
     accessKeyId,
@@ -52,7 +53,8 @@ function getInputs() {
     port,
     registries,
     secretsFile,
-    useBuildKit
+    useBuildKit,
+    workDir,
   };
 }
 
@@ -192,8 +194,8 @@ async function runHealthcheck(imageName, inputs) {
   console.log(`${stdout} stopped.`);
 }
 
-function dockerBuild(args, env = {}) {
-  return util.execWithLiveOutput("docker", ["build", ...args, "."], env);
+function dockerBuild(args, env = {}, workDir = ".") {
+  return util.execWithLiveOutput("docker", ["build", ...args, workDir], env);
 }
 
 async function assertECRRepo(client, repository) {
@@ -423,11 +425,10 @@ async function main() {
       const keyFileName = "key";
       await fs.writeFile(keyFileName, key);
       await fs.chmod(keyFileName, "0600");
-      await util.execFile("ssh-add", [keyFileName], { env: { "SSH_AUTH_SOCK": sshAuthSock }});
-      dockerBuildArgs.push(
-        "--ssh",
-        "default"
-      );
+      await util.execFile("ssh-add", [keyFileName], {
+        env: { SSH_AUTH_SOCK: sshAuthSock },
+      });
+      dockerBuildArgs.push("--ssh", "default");
     } else {
       dockerBuildArgs.push(
         "--build-arg",
@@ -443,13 +444,10 @@ async function main() {
   if (inputs.githubPackagesToken) {
     if (/mount=type=secret,id=npmrc/m.test(dockerfile)) {
       console.log("npm registry secret requested, injecting");
-      const npmrc = `@glg:registry=https://npm.pkg.github.com\n//npm.pkg.github.com/:_authToken=${inputs.githubPackagesToken}`
-      const npmrcFileName = "npmrc"
+      const npmrc = `@glg:registry=https://npm.pkg.github.com\n//npm.pkg.github.com/:_authToken=${inputs.githubPackagesToken}`;
+      const npmrcFileName = "npmrc";
       await fs.writeFile(npmrcFileName, npmrc);
-      dockerBuildArgs.push(
-        "--secret",
-        `id=npmrc,src=${npmrcFileName}`
-      );
+      dockerBuildArgs.push("--secret", `id=npmrc,src=${npmrcFileName}`);
     }
   }
   core.endGroup();
@@ -457,13 +455,10 @@ async function main() {
   core.startGroup("docker secrets setup for secrets file");
   if (inputs.secretsFile) {
     if (/mount=type=secret,id=secrets/m.test(dockerfile)) {
-      console.log("injecting secrets file into docker build")
-      dockerBuildArgs.push(
-        "--secret",
-        `id=secrets,src=${inputs.secretsFile}`
-      )
+      console.log("injecting secrets file into docker build");
+      dockerBuildArgs.push("--secret", `id=secrets,src=${inputs.secretsFile}`);
     } else {
-      console.error("did not detect secrets mount in docker file")
+      console.error("did not detect secrets mount in docker file");
     }
   }
   core.endGroup();
@@ -488,7 +483,7 @@ async function main() {
   core.startGroup("docker build env");
   const buildEnv = {};
   if (/^\s*(run|copy).*?<</im.test(dockerfile)) {
-    inputs.useBuildKit = true
+    inputs.useBuildKit = true;
   }
   if (inputs.useBuildKit) {
     core.info("Enabling Docker Buildkit");
@@ -548,7 +543,7 @@ async function main() {
    * Build the image
    */
   core.startGroup("Docker Build");
-  await util.dockerBuild(dockerBuildArgs, buildEnv);
+  await util.dockerBuild(dockerBuildArgs, buildEnv, inputs.workDir);
   core.endGroup();
 
   /**

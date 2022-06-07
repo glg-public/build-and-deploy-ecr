@@ -34,6 +34,7 @@ This action requires certain things to be configured in your repo:
 | port | The port the server listens on | `3000` |
 | secret_access_key | An AWS Secret Access Key | **REQUIRED** |
 | buildkit | Whether to use docker buildkit | `"true"` |
+| working_directory | The path to use as the build context, in case you need something besides project root | "." |
 
 ### Config Notes
 
