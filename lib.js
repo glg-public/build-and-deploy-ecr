@@ -26,7 +26,7 @@ function getInputs() {
   const buildConfig = core.getInput("build_config");
   const deploy = core.getBooleanInput("deploy");
   const dockerfile = core.getInput("dockerfile");
-  const envFile = core.getInput("env_file");
+  let envFile = core.getInput("env_file");
   const githubSSHKey = core.getInput("github_ssh_key");
   const githubPackagesToken = core.getInput("github_packages_token");
   const healthcheck = core.getInput("healthcheck");
@@ -36,6 +36,10 @@ function getInputs() {
   const secretsFile = core.getInput("secrets_file");
   const useBuildKit = core.getBooleanInput("buildkit");
   const workDir = core.getInput("working_directory");
+
+  if (envFile && workDir) {
+    envFile = path.join(workDir, envFile);
+  }
 
   return {
     accessKeyId,
