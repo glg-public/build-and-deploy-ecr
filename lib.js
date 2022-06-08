@@ -451,7 +451,9 @@ async function main() {
      * info in the repository name
      */
     if (inputs?.workDir !== ".") {
-      ecrRepository += `-${workDir.toLowerCase().replace(/[+_/]/g, "-")}`;
+      ecrRepository += `-${inputs.workDir
+        .toLowerCase()
+        .replace(/[+_/]/g, "-")}`;
     }
   }
 
