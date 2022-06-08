@@ -37,6 +37,23 @@ function getInputs() {
   const useBuildKit = core.getBooleanInput("buildkit");
   const workDir = core.getInput("working_directory");
 
+  let {
+    payload: {
+      repository: { full_name: ghRepo },
+    },
+  } = github.context;
+  ghRepo = ghRepo.toLowerCase();
+  const ecrRepositoryOverride = core.getInput("ecr_repository_override");
+  if (
+    ecrRepositoryOverride &&
+    !ecrRepositoryOverride.startsWith(`github/${ghRepo}`)
+  ) {
+    core.setFailed(
+      `The value of ecr_repository_override must start with "github/${ghRepo}"`
+    );
+    process.exit(1);
+  }
+
   /**
    * We assume any files specified are going to be relative to working_directory
    */
@@ -71,6 +88,7 @@ function getInputs() {
     secretsFile,
     useBuildKit,
     workDir,
+    ecrRepositoryOverride,
   };
 }
 
@@ -414,7 +432,29 @@ async function main() {
   } = github.context;
 
   const branch = ref.split("refs/heads/")[1];
-  const ecrRepository = `github/${ghRepo}/${branch}`.toLowerCase();
+
+  /**
+   * Users are able to manually set the ecr repo name. We have
+   * pre-validated it in the getInputs function.
+   */
+  let ecrRepository;
+  if (inputs.ecrRepositoryOverride) {
+    ecrRepository = ecrRepositoryOverride;
+  } else {
+    /**
+     * This is the default ecr repository name
+     */
+    ecrRepository = `github/${ghRepo}/${branch}`.toLowerCase();
+
+    /**
+     * If we're working from a non-root directory, we want to include that
+     * info in the repository name
+     */
+    if (inputs?.workDir !== ".") {
+      ecrRepository += `-${workDir.toLowerCase().replace(/[+_/]/g, "-")}`;
+    }
+  }
+
   const containerBase = `${inputs.ecrURI}/${ecrRepository}`.toLowerCase();
   const prefix = inputs.architecture ? `${inputs.architecture}-` : "";
   const containerImageLatest = `${containerBase}:${prefix}latest`;
