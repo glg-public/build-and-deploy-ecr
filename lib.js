@@ -450,7 +450,7 @@ async function main() {
      * If we're working from a non-root directory, we want to include that
      * info in the repository name
      */
-    if (inputs?.workDir !== ".") {
+    if (inputs.workDir && inputs.workDir !== ".") {
       ecrRepository += `-${inputs.workDir
         .toLowerCase()
         .replace(/[+_/]/g, "-")}`;
