@@ -13,6 +13,7 @@ const {
 } = require("@aws-sdk/client-ecr");
 
 const fs = require("fs").promises;
+const path = require("path");
 
 function getInputs() {
   const accessKeyId = core.getInput("access_key_id", { required: true });
@@ -24,16 +25,49 @@ function getInputs() {
   const buildArgs = core.getInput("build-args");
   const buildConfig = core.getInput("build_config");
   const deploy = core.getBooleanInput("deploy");
-  const dockerfile = core.getInput("dockerfile");
-  const envFile = core.getInput("env_file");
+  let dockerfile = core.getInput("dockerfile");
+  let envFile = core.getInput("env_file");
   const githubSSHKey = core.getInput("github_ssh_key");
   const githubPackagesToken = core.getInput("github_packages_token");
   const healthcheck = core.getInput("healthcheck");
   const platform = core.getInput("platform");
   const port = core.getInput("port");
   const registries = core.getInput("registries");
-  const secretsFile = core.getInput("secrets_file");
+  let secretsFile = core.getInput("secrets_file");
   const useBuildKit = core.getBooleanInput("buildkit");
+  const workDir = core.getInput("working_directory");
+
+  let {
+    payload: {
+      repository: { full_name: ghRepo },
+    },
+  } = github.context;
+  ghRepo = ghRepo.toLowerCase();
+  const ecrRepositoryOverride = core.getInput("ecr_repository_override");
+  if (
+    ecrRepositoryOverride &&
+    !ecrRepositoryOverride.startsWith(`github/${ghRepo}`)
+  ) {
+    core.setFailed(
+      `The value of ecr_repository_override must start with "github/${ghRepo}"`
+    );
+    process.exit(1);
+  }
+
+  /**
+   * We assume any files specified are going to be relative to working_directory
+   */
+  if (envFile && workDir) {
+    envFile = path.join(workDir, envFile);
+  }
+
+  if (dockerfile && workDir) {
+    dockerfile = path.join(workDir, dockerfile);
+  }
+
+  if (secretsFile && workDir) {
+    secretsFile = path.join(workDir, secretsFile);
+  }
 
   return {
     accessKeyId,
@@ -52,7 +86,9 @@ function getInputs() {
     port,
     registries,
     secretsFile,
-    useBuildKit
+    useBuildKit,
+    workDir,
+    ecrRepositoryOverride,
   };
 }
 
@@ -192,8 +228,8 @@ async function runHealthcheck(imageName, inputs) {
   console.log(`${stdout} stopped.`);
 }
 
-function dockerBuild(args, env = {}) {
-  return util.execWithLiveOutput("docker", ["build", ...args, "."], env);
+function dockerBuild(args, env = {}, workDir = ".") {
+  return util.execWithLiveOutput("docker", ["build", ...args, workDir], env);
 }
 
 async function assertECRRepo(client, repository) {
@@ -396,7 +432,31 @@ async function main() {
   } = github.context;
 
   const branch = ref.split("refs/heads/")[1];
-  const ecrRepository = `github/${ghRepo}/${branch}`.toLowerCase();
+
+  /**
+   * Users are able to manually set the ecr repo name. We have
+   * pre-validated it in the getInputs function.
+   */
+  let ecrRepository;
+  if (inputs.ecrRepositoryOverride) {
+    ecrRepository = ecrRepositoryOverride;
+  } else {
+    /**
+     * This is the default ecr repository name
+     */
+    ecrRepository = `github/${ghRepo}/${branch}`.toLowerCase();
+
+    /**
+     * If we're working from a non-root directory, we want to include that
+     * info in the repository name
+     */
+    if (inputs.workDir && inputs.workDir !== ".") {
+      ecrRepository += `-${inputs.workDir
+        .toLowerCase()
+        .replace(/[+_/]/g, "-")}`;
+    }
+  }
+
   const containerBase = `${inputs.ecrURI}/${ecrRepository}`.toLowerCase();
   const prefix = inputs.architecture ? `${inputs.architecture}-` : "";
   const containerImageLatest = `${containerBase}:${prefix}latest`;
@@ -423,11 +483,10 @@ async function main() {
       const keyFileName = "key";
       await fs.writeFile(keyFileName, key);
       await fs.chmod(keyFileName, "0600");
-      await util.execFile("ssh-add", [keyFileName], { env: { "SSH_AUTH_SOCK": sshAuthSock }});
-      dockerBuildArgs.push(
-        "--ssh",
-        "default"
-      );
+      await util.execFile("ssh-add", [keyFileName], {
+        env: { SSH_AUTH_SOCK: sshAuthSock },
+      });
+      dockerBuildArgs.push("--ssh", "default");
     } else {
       dockerBuildArgs.push(
         "--build-arg",
@@ -443,13 +502,10 @@ async function main() {
   if (inputs.githubPackagesToken) {
     if (/mount=type=secret,id=npmrc/m.test(dockerfile)) {
       console.log("npm registry secret requested, injecting");
-      const npmrc = `@glg:registry=https://npm.pkg.github.com\n//npm.pkg.github.com/:_authToken=${inputs.githubPackagesToken}`
-      const npmrcFileName = "npmrc"
+      const npmrc = `@glg:registry=https://npm.pkg.github.com\n//npm.pkg.github.com/:_authToken=${inputs.githubPackagesToken}`;
+      const npmrcFileName = "npmrc";
       await fs.writeFile(npmrcFileName, npmrc);
-      dockerBuildArgs.push(
-        "--secret",
-        `id=npmrc,src=${npmrcFileName}`
-      );
+      dockerBuildArgs.push("--secret", `id=npmrc,src=${npmrcFileName}`);
     }
   }
   core.endGroup();
@@ -457,13 +513,10 @@ async function main() {
   core.startGroup("docker secrets setup for secrets file");
   if (inputs.secretsFile) {
     if (/mount=type=secret,id=secrets/m.test(dockerfile)) {
-      console.log("injecting secrets file into docker build")
-      dockerBuildArgs.push(
-        "--secret",
-        `id=secrets,src=${inputs.secretsFile}`
-      )
+      console.log("injecting secrets file into docker build");
+      dockerBuildArgs.push("--secret", `id=secrets,src=${inputs.secretsFile}`);
     } else {
-      console.error("did not detect secrets mount in docker file")
+      console.error("did not detect secrets mount in docker file");
     }
   }
   core.endGroup();
@@ -488,7 +541,7 @@ async function main() {
   core.startGroup("docker build env");
   const buildEnv = {};
   if (/^\s*(run|copy).*?<</im.test(dockerfile)) {
-    inputs.useBuildKit = true
+    inputs.useBuildKit = true;
   }
   if (inputs.useBuildKit) {
     core.info("Enabling Docker Buildkit");
@@ -548,7 +601,7 @@ async function main() {
    * Build the image
    */
   core.startGroup("Docker Build");
-  await util.dockerBuild(dockerBuildArgs, buildEnv);
+  await util.dockerBuild(dockerBuildArgs, buildEnv, inputs.workDir);
   core.endGroup();
 
   /**

@@ -34,6 +34,8 @@ This action requires certain things to be configured in your repo:
 | port | The port the server listens on | `3000` |
 | secret_access_key | An AWS Secret Access Key | **REQUIRED** |
 | buildkit | Whether to use docker buildkit | `"true"` |
+| working_directory | The path to use as the build context, in case you need something besides project root | "." |
+| ecr_repository_override | You can manually specify the repository name to push your docker image to. It must start with `github/<org>/<repo>` | `""`
 
 ### Config Notes
 
