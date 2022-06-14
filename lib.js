@@ -167,8 +167,6 @@ async function runHealthcheck(imageName, inputs) {
   const args = [
     "run",
     "--detach",
-    "--net",
-    "host",
     "--publish",
     `${inputs.port}:${inputs.port}`,
     "--env",
