@@ -39,7 +39,7 @@ function getInputs() {
   // below environments are NOT required when the base image in Dockerfile is in the same ecr after image has been built.
   const baseImageAccessKeyId = core.getInput("base_image_access_key_id");
   const baseImageSecretAccessKey = core.getInput("base_image_secret_access_key");
-  let baseImageRegion = core.getInput("base_image_region");
+  const baseImageRegion = core.getInput("base_image_region");
 
   let {
     payload: {
@@ -596,9 +596,6 @@ async function main() {
    * aws_account_id.dkr.ecr.region.amazonaws.com
   **/
   if (inputs.base_image_access_key_id && inputs.base_image_secret_access_key) {
-    if (!inputs.baseImageRegion) {
-      baseImageRegion = "us-east-1";
-    }
     const baseImageEcrClient = new ECRClient({
       baseImageRegion,
       credentials: {
