@@ -596,9 +596,8 @@ async function main() {
    * aws_account_id.dkr.ecr.region.amazonaws.com
   **/
   if (inputs.baseImageAccessKeyId && inputs.baseImageSecretAccessKey) {
-    console.log(inputs.baseImageRegion);
     const baseImageEcrClient = new ECRClient({
-      baseImageRegion,
+      region: baseImageRegion,
       credentials: {
         accessKeyId: inputs.baseImageAccessKeyId,
         secretAccessKey: inputs.baseImageSecretAccessKey,
