@@ -36,6 +36,10 @@ function getInputs() {
   let secretsFile = core.getInput("secrets_file");
   const useBuildKit = core.getBooleanInput("buildkit");
   const workDir = core.getInput("working_directory");
+  // below environments are NOT required when the base image in Dockerfile is in the same ecr after image has been built.
+  const baseImageAccessKeyId = core.getInput("base_image_access_key_id");
+  const baseImageSecretAccessKey = core.getInput("base_image_secret_access_key");
+  let baseImageRegion = core.getInput("base_image_region");
 
   let {
     payload: {
@@ -89,6 +93,9 @@ function getInputs() {
     useBuildKit,
     workDir,
     ecrRepositoryOverride,
+    baseImageAccessKeyId,
+    baseImageSecretAccessKey,
+    baseImageRegion,
   };
 }
 
@@ -584,6 +591,25 @@ async function main() {
   hosts.push(...moreHosts);
 
   /**
+   * Need to login ecr if the base image on the Dockerfile
+   * isn't in the same same account of the target ecr
+   * aws_account_id.dkr.ecr.region.amazonaws.com
+  **/
+  if (inputs.base_image_access_key_id && inputs.base_image_secret_access_key) {
+    if (!inputs.baseImageRegion) {
+      baseImageRegion = "us-east-1";
+    }
+    const baseImageEcrClient = new ECRClient({
+      baseImageRegion,
+      credentials: {
+        accessKeyId: inputs.baseImageAccessKeyId,
+        secretAccessKey: inputs.baseImageSecretAccessKey,
+      },
+    });
+    await util.dockerLogin(baseImageEcrClient, inputs.baseImageEcrURI);
+  }
+
+  /**
    * Parse any additional build args
    */
   if (inputs.buildArgs) {
@@ -609,6 +635,14 @@ async function main() {
     await util.runHealthcheck(containerImageSha, inputs);
   } else {
     core.warning("No healthcheck specified");
+  }
+
+  /*
+   * as part of line 598, we should login back as the target ecr prior pushing the image.
+   */
+
+  if (inputs.base_image_access_key_id && inputs.base_image_secret_access_key) {
+    await util.dockerLogin(ecrClient, inputs.ecrURI);
   }
 
   /**
