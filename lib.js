@@ -596,7 +596,7 @@ async function main() {
    * aws_account_id.dkr.ecr.region.amazonaws.com
   **/
   console.log(":::before do it")
-  if (inputs.base_image_access_key_id && inputs.base_image_secret_access_key) {
+  if (inputs.baseImageAccessKeyId && inputs.baseImageSecretAccessKey) {
     console.log(":::do it")
     const baseImageEcrClient = new ECRClient({
       baseImageRegion,
@@ -640,7 +640,7 @@ async function main() {
    * as part of line 598, we should login back as the target ecr prior pushing the image.
    */
 
-  if (inputs.base_image_access_key_id && inputs.base_image_secret_access_key) {
+  if (inputs.baseImageAccessKeyId && inputs.baseImageSecretAccessKey) {
     await util.dockerLogin(ecrClient, inputs.ecrURI);
   }
 
