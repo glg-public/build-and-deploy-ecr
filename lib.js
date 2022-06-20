@@ -595,9 +595,8 @@ async function main() {
    * isn't in the same same account of the target ecr
    * aws_account_id.dkr.ecr.region.amazonaws.com
   **/
-  console.log(":::before do it")
   if (inputs.baseImageAccessKeyId && inputs.baseImageSecretAccessKey) {
-    console.log(":::do it")
+    console.log(inputs.baseImageRegion);
     const baseImageEcrClient = new ECRClient({
       baseImageRegion,
       credentials: {
