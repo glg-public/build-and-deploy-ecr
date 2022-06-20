@@ -78,11 +78,9 @@ inputs:
   base_image_secret_access_key:
     description: The secret key to pull image from different aws ecr when building the image.
     required: false
-  base_image_region:
-    description: The region of the base image you will pull from different aws ecr when building the image, default is use1.
+  base_image_ecr_uri:
+    description: The ecr uri of the base image you will pull from different aws ecr when building the image.
     required: false
-    default: "us-east-1"
-
 
 outputs:
   container-path:

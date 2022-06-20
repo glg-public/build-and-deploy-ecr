@@ -39,7 +39,7 @@ function getInputs() {
   // below environments are NOT required when the base image in Dockerfile is in the same ecr after image has been built.
   const baseImageAccessKeyId = core.getInput("base_image_access_key_id");
   const baseImageSecretAccessKey = core.getInput("base_image_secret_access_key");
-  const baseImageRegion = core.getInput("base_image_region");
+  const baseImageEcrURI = core.getInput("base_image_ecr_uri");
 
   let {
     payload: {
@@ -95,7 +95,7 @@ function getInputs() {
     ecrRepositoryOverride,
     baseImageAccessKeyId,
     baseImageSecretAccessKey,
-    baseImageRegion,
+    baseImageEcrURI,
   };
 }
 
@@ -595,9 +595,10 @@ async function main() {
    * isn't in the same same account of the target ecr
    * aws_account_id.dkr.ecr.region.amazonaws.com
   **/
-  if (inputs.baseImageAccessKeyId && inputs.baseImageSecretAccessKey) {
+  if (inputs.baseImageAccessKeyId && inputs.baseImageSecretAccessKey && inputs.baseImageEcrURI) {
+    const baseImageRegion = inputs.baseImageEcrURI.split(".")[3];
     const baseImageEcrClient = new ECRClient({
-      region: inputs.baseImageRegion,
+      region: baseImageRegion,
       credentials: {
         accessKeyId: inputs.baseImageAccessKeyId,
         secretAccessKey: inputs.baseImageSecretAccessKey,
@@ -638,7 +639,7 @@ async function main() {
    * as part of line 598, we should login back as the target ecr prior pushing the image.
    */
 
-  if (inputs.baseImageAccessKeyId && inputs.baseImageSecretAccessKey) {
+  if (inputs.baseImageAccessKeyId && inputs.baseImageSecretAccessKey && inputs.baseImageEcrURI) {
     await util.dockerLogin(ecrClient, inputs.ecrURI);
   }
 
