@@ -597,7 +597,7 @@ async function main() {
   **/
   if (inputs.baseImageAccessKeyId && inputs.baseImageSecretAccessKey) {
     const baseImageEcrClient = new ECRClient({
-      region: baseImageRegion,
+      region: inputs.baseImageRegion,
       credentials: {
         accessKeyId: inputs.baseImageAccessKeyId,
         secretAccessKey: inputs.baseImageSecretAccessKey,
