@@ -437,7 +437,7 @@ async function main() {
    */
   let ecrRepository;
   if (inputs.ecrRepositoryOverride) {
-    ecrRepository = ecrRepositoryOverride;
+    ecrRepository = inputs.ecrRepositoryOverride;
   } else {
     /**
      * This is the default ecr repository name
