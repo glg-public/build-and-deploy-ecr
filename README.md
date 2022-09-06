@@ -1,4 +1,4 @@
-# build-and-deploy-ecr
+# build-and-push-to-ecr
 This github action builds a docker image from a dockerfile, healthchecks it, and pushes it to ECR in compliance with GLG naming conventions
 
 ## Requirements
